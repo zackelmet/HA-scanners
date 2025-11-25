@@ -43,6 +43,12 @@ export async function POST(req: NextRequest) {
   // Handle the event
   try {
     switch (event.type) {
+      case "checkout.session.completed":
+        await handleCheckoutCompleted(
+          event.data.object as Stripe.Checkout.Session,
+        );
+        break;
+
       case "customer.subscription.created":
       case "customer.subscription.updated":
         await handleSubscriptionChange(
@@ -75,12 +81,69 @@ export async function POST(req: NextRequest) {
   }
 }
 
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  console.log("=== CHECKOUT COMPLETED ===");
+  console.log("Session ID:", session.id);
+  console.log("Customer:", session.customer);
+  console.log("Subscription:", session.subscription);
+
+  const userId = session.metadata?.firebase_uid;
+
+  if (!userId) {
+    console.error("❌ No firebase_uid in session metadata!");
+    return;
+  }
+
+  console.log("✅ Found Firebase UID in metadata:", userId);
+
+  const customerId = session.customer as string;
+  const subscriptionId = session.subscription as string;
+
+  // Update user with customer ID if not already set
+  const userRef = db.collection("users").doc(userId);
+  const userDoc = await userRef.get();
+
+  if (!userDoc.exists) {
+    console.error(`❌ User ${userId} not found in Firestore!`);
+    return;
+  }
+
+  await userRef.update({
+    stripeCustomerId: customerId,
+    stripeSubscriptionId: subscriptionId,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  console.log(`✅ Updated user ${userId} with Stripe IDs`);
+
+  // If subscription ID exists, fetch and process it
+  if (subscriptionId) {
+    const stripe = await getStripeServerSide();
+    if (stripe) {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const priceId = subscription.items.data[0]?.price.id;
+      await updateUserSubscription(
+        userId,
+        subscription,
+        priceId,
+        subscription.status,
+      );
+    }
+  }
+}
+
 async function handleSubscriptionChange(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string;
   const subscriptionId = subscription.id;
   const status = subscription.status;
   const priceId = subscription.items.data[0]?.price.id;
   const productId = subscription.items.data[0]?.price.product as string;
+
+  console.log("=== WEBHOOK RECEIVED ===");
+  console.log("Customer ID:", customerId);
+  console.log("Subscription ID:", subscriptionId);
+  console.log("Status:", status);
+  console.log("Price ID:", priceId);
 
   // Find user by Stripe customer ID
   const usersSnapshot = await db
@@ -90,11 +153,64 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     .get();
 
   if (usersSnapshot.empty) {
-    console.error(`No user found for customer: ${customerId}`);
+    console.error(`❌ No user found for customer: ${customerId}`);
+    console.error("Attempting to fetch customer email from Stripe...");
+
+    // Try to get customer email from Stripe as fallback
+    const stripe = await getStripeServerSide();
+    if (stripe) {
+      try {
+        const customer = await stripe.customers.retrieve(customerId);
+        if ("email" in customer && customer.email) {
+          console.log("Found customer email:", customer.email);
+
+          // Try to find user by email
+          const userByEmail = await db
+            .collection("users")
+            .where("email", "==", customer.email)
+            .limit(1)
+            .get();
+
+          if (userByEmail.empty) {
+            console.error(`❌ No user found with email: ${customer.email}`);
+            console.error("User needs to sign up first before subscribing!");
+            return;
+          }
+
+          console.log("✅ Found user by email, updating stripeCustomerId...");
+          const userId = userByEmail.docs[0].id;
+
+          // Update the user with the Stripe customer ID
+          await db.collection("users").doc(userId).update({
+            stripeCustomerId: customerId,
+          });
+
+          // Continue with the subscription update
+          await updateUserSubscription(userId, subscription, priceId, status);
+          return;
+        }
+      } catch (err) {
+        console.error("Error retrieving customer from Stripe:", err);
+      }
+    }
     return;
   }
 
   const userId = usersSnapshot.docs[0].id;
+  console.log("✅ Found user:", userId);
+
+  await updateUserSubscription(userId, subscription, priceId, status);
+}
+
+async function updateUserSubscription(
+  userId: string,
+  subscription: Stripe.Subscription,
+  priceId: string,
+  status: string,
+) {
+  const subscriptionId = subscription.id;
+  const customerId = subscription.customer as string;
+  const productId = subscription.items.data[0]?.price.product as string;
 
   // Update or create subscription document
   const subscriptionRef = db.collection("subscriptions").doc(subscriptionId);
@@ -133,9 +249,12 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 
   const planLimits = PLAN_LIMITS[planTier];
 
-  console.log(`Mapping price ID ${priceId} to plan tier: ${planTier}`);
+  console.log(`📊 Mapping price ID ${priceId} to plan tier: ${planTier}`);
+  console.log(`📈 Monthly scan limit: ${planLimits.monthlyScans}`);
 
   // Update user's subscription status and plan details
+  console.log(`🔄 Updating user ${userId} in Firestore...`);
+
   await db
     .collection("users")
     .doc(userId)
@@ -155,17 +274,22 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
+  console.log("✅ Firestore update successful!");
+
   // Update custom claims for authorization
   const role =
     status === "active"
       ? planTier.charAt(0).toUpperCase() + planTier.slice(1)
       : "Free";
+
+  console.log(`🔐 Setting custom claims: ${role}`);
+
   await admin.auth().setCustomUserClaims(userId, {
     stripeRole: role,
   });
 
   console.log(
-    `Subscription ${subscriptionId} updated for user ${userId}: ${status}`,
+    `✅ Subscription ${subscriptionId} updated for user ${userId}: ${status}`,
   );
 }
 
