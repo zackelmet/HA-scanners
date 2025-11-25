@@ -9,6 +9,15 @@ const db = admin.firestore();
 
 // Disable body parsing so we can access raw body for webhook signature verification
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+// GET handler to verify endpoint is alive
+export async function GET() {
+  return NextResponse.json({
+    message: "Webhook endpoint is alive. Use POST to send webhook events.",
+    status: "ok",
+  });
+}
 
 export async function POST(req: NextRequest) {
   console.log("🔔 WEBHOOK RECEIVED - Starting processing...");
