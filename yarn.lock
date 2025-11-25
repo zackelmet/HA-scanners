@@ -1156,6 +1156,11 @@
   dependencies:
     "@types/mdx" "^2.0.0"
 
+"@netlify/plugin-nextjs@^5.14.7":
+  version "5.14.7"
+  resolved "https://registry.npmjs.org/@netlify/plugin-nextjs/-/plugin-nextjs-5.14.7.tgz"
+  integrity sha512-RJRPGIlaY3M4KA6GxpOlynCPUKCVbtkHwg4ccHhoSVrHgysW3nqw1pX+FBvlBexrUl1JO2zuDFh4enRal9BpAw==
+
 "@next/env@14.2.15":
   version "14.2.15"
   resolved "https://registry.npmjs.org/@next/env/-/env-14.2.15.tgz"
