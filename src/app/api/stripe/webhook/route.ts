@@ -117,10 +117,23 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 
   // Determine plan tier from price ID
   let planTier: PlanTier = "basic";
-  if (priceId.includes("pro")) planTier = "pro";
-  if (priceId.includes("enterprise")) planTier = "enterprise";
+
+  // Map Stripe price IDs to plan tiers
+  const essentialPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ESSENTIAL;
+  const proPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO;
+  const scalePriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_SCALE;
+
+  if (priceId === essentialPriceId) {
+    planTier = "basic";
+  } else if (priceId === proPriceId) {
+    planTier = "pro";
+  } else if (priceId === scalePriceId) {
+    planTier = "enterprise";
+  }
 
   const planLimits = PLAN_LIMITS[planTier];
+
+  console.log(`Mapping price ID ${priceId} to plan tier: ${planTier}`);
 
   // Update user's subscription status and plan details
   await db
