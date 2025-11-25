@@ -7,7 +7,10 @@ import {
   faShieldHalved,
   faPlus,
   faHistory,
+  faRocket,
+  faCrown,
 } from "@fortawesome/free-solid-svg-icons";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -16,7 +19,9 @@ export default function DashboardPage() {
     <main className="flex min-h-screen flex-col pb-10">
       <div className="w-full bg-base-200 py-8">
         <div className="max-w-7xl mx-auto px-8">
-          <h1 className="text-4xl font-bold mb-2">Security Scanner Dashboard</h1>
+          <h1 className="text-4xl font-bold mb-2">
+            Security Scanner Dashboard
+          </h1>
           <p className="text-lg opacity-80">
             Launch and manage your vulnerability scans
           </p>
@@ -24,6 +29,27 @@ export default function DashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-8 py-8 w-full">
+        {/* UPGRADE BANNER */}
+        <div className="alert alert-warning shadow-xl mb-8 border-2 border-warning">
+          <div className="flex items-center gap-4 w-full">
+            <FontAwesomeIcon icon={faCrown} className="text-4xl" />
+            <div className="flex-1">
+              <h3 className="font-bold text-xl mb-1">
+                🚀 Upgrade to Start Scanning
+              </h3>
+              <p className="text-sm">
+                Subscribe now to unlock powerful Nmap and OpenVAS vulnerability
+                scanning. Starting at just $19/month • 7-day money-back
+                guarantee
+              </p>
+            </div>
+            <Link href="/#pricing" className="btn btn-primary btn-lg gap-2">
+              <FontAwesomeIcon icon={faRocket} />
+              View Plans
+            </Link>
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="tabs tabs-boxed mb-8">
           <a
@@ -133,7 +159,36 @@ export default function DashboardPage() {
         {/* New Scan Tab */}
         {activeTab === "newScan" && (
           <div className="max-w-3xl mx-auto">
-            <div className="card bg-base-100 shadow-xl">
+            {/* PAYWALL GATE */}
+            <div className="card bg-gradient-to-br from-primary to-secondary text-primary-content shadow-2xl mb-6">
+              <div className="card-body items-center text-center py-12">
+                <FontAwesomeIcon
+                  icon={faCrown}
+                  className="text-7xl mb-4 animate-pulse"
+                />
+                <h2 className="card-title text-3xl mb-4">Premium Feature</h2>
+                <p className="text-lg mb-6 max-w-md">
+                  Running security scans requires an active subscription. Choose
+                  a plan that fits your needs and start protecting your
+                  infrastructure today!
+                </p>
+                <div className="flex gap-4">
+                  <Link
+                    href="/#pricing"
+                    className="btn btn-lg btn-accent gap-2"
+                  >
+                    <FontAwesomeIcon icon={faRocket} />
+                    Upgrade Now
+                  </Link>
+                </div>
+                <p className="text-sm mt-4 opacity-80">
+                  ✓ 7-day money-back guarantee • ✓ Cancel anytime • ✓ No hidden
+                  fees
+                </p>
+              </div>
+            </div>
+
+            <div className="card bg-base-100 shadow-xl opacity-50 pointer-events-none">
               <div className="card-body">
                 <h2 className="card-title mb-6">Create New Scan</h2>
 

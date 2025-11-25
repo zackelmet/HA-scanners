@@ -1,24 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { initializeAdmin } from "@/lib/firebase/firebaseAdmin";
 import { CreateScanRequest } from "@/lib/types/scanner";
+import {
+  UserDocument,
+  getPlanLimits,
+  needsMonthlyReset,
+} from "@/lib/types/user";
 
 export async function POST(request: NextRequest) {
   try {
     const admin = initializeAdmin();
     const auth = admin.auth();
     const firestore = admin.firestore();
-    
+
     // Get the authorization token
     const authHeader = request.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
         { error: "Unauthorized - No token provided" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     const token = authHeader.split("Bearer ")[1];
-    
+
     // Verify the user token
     let decodedToken;
     try {
@@ -26,7 +31,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       return NextResponse.json(
         { error: "Unauthorized - Invalid token" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -40,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (!type || !target || !options) {
       return NextResponse.json(
         { error: "Missing required fields: type, target, options" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -48,60 +53,119 @@ export async function POST(request: NextRequest) {
     if (type !== "nmap" && type !== "openvas") {
       return NextResponse.json(
         { error: "Invalid scan type. Must be 'nmap' or 'openvas'" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Basic target validation (IP or domain)
-    const targetPattern = /^(?:(?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)$/;
+    const targetPattern =
+      /^(?:(?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)$/;
     if (!targetPattern.test(target)) {
       return NextResponse.json(
-        { error: "Invalid target format. Must be a valid IP address or domain" },
-        { status: 400 }
+        {
+          error: "Invalid target format. Must be a valid IP address or domain",
+        },
+        { status: 400 },
       );
     }
 
-    // Check user's subscription status (optional - implement based on your needs)
-    // const userDoc = await firestore.collection("users").doc(userId).get();
-    // if (!userDoc.exists || !userDoc.data()?.subscriptionStatus === "active") {
-    //   return NextResponse.json(
-    //     { error: "Active subscription required" },
-    //     { status: 403 }
-    //   );
-    // }
+    // Check user's subscription status
+    const userDocRef = firestore.collection("users").doc(userId);
+    const userDoc = await userDocRef.get();
 
-    // Create scan document
-    const scanData = {
+    if (!userDoc.exists) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const userData = userDoc.data() as UserDocument;
+
+    // Require active subscription to run scans
+    if (userData.subscriptionStatus !== "active") {
+      return NextResponse.json(
+        {
+          error: "Active subscription required to run scans",
+          message: "Please subscribe to a plan to start scanning",
+          currentPlan: userData.currentPlan || "free",
+          subscriptionStatus: userData.subscriptionStatus,
+        },
+        { status: 403 },
+      );
+    }
+
+    // Get plan limits
+    const planLimits = getPlanLimits(userData.currentPlan);
+
+    // Check if monthly reset is needed
+    if (needsMonthlyReset(userData.lastMonthlyReset)) {
+      await userDocRef.update({
+        scansThisMonth: 0,
+        lastMonthlyReset: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      userData.scansThisMonth = 0;
+    }
+
+    // Check monthly scan limits from user document
+    const scansThisMonth = userData.scansThisMonth || 0;
+    const monthlyLimit = planLimits.monthlyScans;
+
+    // Check if limit reached
+    if (monthlyLimit !== -1 && scansThisMonth >= monthlyLimit) {
+      return NextResponse.json(
+        {
+          error: "Monthly scan limit reached",
+          message: `You have used ${scansThisMonth}/${monthlyLimit} scans this month. Upgrade your plan for more scans.`,
+          scansUsed: scansThisMonth,
+          scanLimit: monthlyLimit,
+          currentPlan: userData.currentPlan,
+        },
+        { status: 429 },
+      );
+    }
+
+    // Create scan in Firestore
+    const scanRef = await firestore.collection("scans").add({
       userId,
       type,
       target,
       options,
       status: "queued",
-      createdAt: new Date(),
-    };
-
-    const scanRef = await firestore.collection("scans").add(scanData);
-
-    // Add to scan queue
-    await firestore.collection("scanQueue").add({
-      scanId: scanRef.id,
-      priority: 1,
-      queuedAt: new Date(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+    // Update user's scan counters
+    await userDocRef.update({
+      scansThisMonth: admin.firestore.FieldValue.increment(1),
+      totalScansAllTime: admin.firestore.FieldValue.increment(1),
+      lastScanDate: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // TODO: Add message to Azure Queue Storage for processing
+    // await addToAzureQueue({ scanId: scanRef.id, userId, type, target, options });
 
     return NextResponse.json(
       {
         success: true,
         scanId: scanRef.id,
-        message: "Scan queued successfully",
+        message: "Scan created and queued for processing",
+        scan: {
+          id: scanRef.id,
+          type,
+          target,
+          status: "queued",
+        },
+        scansRemaining:
+          monthlyLimit === -1 ? "unlimited" : monthlyLimit - scansThisMonth - 1,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Error creating scan:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -111,18 +175,18 @@ export async function GET(request: NextRequest) {
     const admin = initializeAdmin();
     const auth = admin.auth();
     const firestore = admin.firestore();
-    
+
     // Get the authorization token
     const authHeader = request.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
         { error: "Unauthorized - No token provided" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     const token = authHeader.split("Bearer ")[1];
-    
+
     // Verify the user token
     let decodedToken;
     try {
@@ -130,7 +194,7 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       return NextResponse.json(
         { error: "Unauthorized - Invalid token" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -157,7 +221,7 @@ export async function GET(request: NextRequest) {
     console.error("Error fetching scans:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,5 +1,7 @@
 import { initializeAdmin } from "@/lib/firebase/firebaseAdmin";
 import { NextRequest, NextResponse } from "next/server";
+import { getStripeServerSide } from "@/lib/stripe/getStripeServerSide";
+import { UserDocument, PLAN_LIMITS } from "@/lib/types/user";
 
 const admin = initializeAdmin();
 
@@ -15,21 +17,49 @@ export async function POST(req: NextRequest) {
     const userDoc = await admin.firestore().collection("users").doc(uid).get();
 
     if (!userDoc.exists) {
-      // Create a new user document in Firestore
+      // Create Stripe customer
+      const stripe = await getStripeServerSide();
+      let stripeCustomerId = null;
+
+      if (stripe && email) {
+        try {
+          const customer = await stripe.customers.create({
+            email: email,
+            name: name || "",
+            metadata: {
+              firebaseUID: uid,
+            },
+          });
+          stripeCustomerId = customer.id;
+        } catch (stripeError) {
+          console.error("Error creating Stripe customer:", stripeError);
+        }
+      }
+
+      // Create a new user document with full structure
+      const freePlan = PLAN_LIMITS.free;
+      const newUser: Partial<UserDocument> = {
+        uid,
+        name: name || "",
+        email: email || "",
+        stripeCustomerId: stripeCustomerId,
+        stripeSubscriptionId: null,
+        subscriptionStatus: "none",
+        currentPlan: "free",
+        monthlyScansLimit: freePlan.monthlyScans,
+        scansThisMonth: 0,
+        totalScansAllTime: 0,
+        lastMonthlyReset: admin.firestore.FieldValue.serverTimestamp() as any,
+        features: freePlan.features,
+        createdAt: admin.firestore.FieldValue.serverTimestamp() as any,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp() as any,
+      };
+
       await admin
         .firestore()
         .collection("users")
         .doc(uid)
-        .set(
-          {
-            name: name || "",
-            email: email || "",
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-          {
-            merge: true,
-          }
-        );
+        .set(newUser, { merge: true });
 
       // Set custom claims for the user
       await admin.auth().setCustomUserClaims(uid, {
@@ -43,6 +73,8 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         message: "User document created successfully",
+        stripeCustomerId,
+        plan: "free",
       });
     } else {
       return NextResponse.json({ message: "User document already exists" });
@@ -51,7 +83,7 @@ export async function POST(req: NextRequest) {
     console.error("Error creating user document:", error);
     return NextResponse.json(
       { error: "Failed to create user document" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
