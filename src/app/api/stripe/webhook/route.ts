@@ -32,10 +32,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const body = await req.text();
+  // Get raw body as Buffer for signature verification
+  const buf = await req.arrayBuffer();
+  const rawBody = Buffer.from(buf);
+  const bodyString = rawBody.toString("utf8");
   const sig = req.headers.get("stripe-signature");
 
   console.log("📝 Webhook signature present:", !!sig);
+  console.log("📝 Raw body length:", rawBody.length);
 
   if (!sig) {
     console.error("❌ No signature in webhook request");
@@ -45,8 +49,9 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
 
   try {
+    // Use the string version for signature verification
     event = stripe.webhooks.constructEvent(
-      body,
+      bodyString,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!,
     );
