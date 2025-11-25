@@ -7,6 +7,9 @@ import { PlanTier, PLAN_LIMITS } from "@/lib/types/user";
 const admin = initializeAdmin();
 const db = admin.firestore();
 
+// Disable body parsing so we can access raw body for webhook signature verification
+export const runtime = "nodejs";
+
 export async function POST(req: NextRequest) {
   console.log("🔔 WEBHOOK RECEIVED - Starting processing...");
 
