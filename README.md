@@ -1,51 +1,112 @@
-# FireSaaS Project
+# HackerAnalytics - Hosted Security Scanners
 
-![CI](https://github.com/AgentBurgundy/fire-saas/actions/workflows/ci.yml/badge.svg) &nbsp;&nbsp;&nbsp;&nbsp; ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+A comprehensive SaaS platform for hosted vulnerability scanning using Nmap and OpenVAS.
 
-![FireSaaS](./public/firesaas.png)
+## 🚀 Features
 
-## **Overview**
+- **Hosted Nmap Scanner**: Network discovery and port scanning without installation
+- **Hosted OpenVAS Scanner**: Comprehensive vulnerability assessment
+- **User Dashboard**: Launch and manage security scans
+- **Real-time Scan Status**: Track scan progress in real-time
+- **Scan History**: Review past scans and results
+- **Subscription Management**: Stripe-powered billing
+- **User Authentication**: Firebase Authentication
 
-FireSaaS is an integrated SaaS (Software as a Service) solution that leverages Firebase, Stripe, and other technologies to create a seamless and scalable platform for SaaS businesses. This project encapsulates key functionalities like user authentication, subscription management, and payment processing, making it easier for developers to build and manage SaaS applications.
+## 🛠️ Tech Stack
 
-## **Updates**
+- **Frontend**: Next.js 14, React, TypeScript, TailwindCSS, DaisyUI
+- **Backend**: Firebase (Firestore, Functions, Auth)
+- **Payment**: Stripe
+- **Scanners**: Nmap, OpenVAS (coming soon)
 
-Firebase App Hosting support WIP (GCP Removes Cookies on requests)
+## 📋 Prerequisites
 
-## **Key Features**
+- Node.js 18+ and npm
+- Firebase account and project
+- Stripe account
+- (Optional) Mixpanel account for analytics
 
-- **Firebase Integration**: Utilizes Firebase for backend services including authentication and database management.
-- **Stripe for Payments**: Integrates Stripe for handling subscriptions and payments.
-- **Security**: Implements Firestore security rules for data protection.
-- **Extensible Architecture**: Designed for easy customization and scalability to suit various SaaS requirements.
+## 🔧 Setup Instructions
 
-## **Why did I build this?**
+### 1. Clone and Install
 
-I built this because so many people that make SaaS templates charge a lot of money for them, and the ones that exist don't use technologies that I like (I enjoy Firebase quite a bit.)
+```bash
+git clone https://github.com/yourusername/hacker-analytics-saas.git
+cd hacker-analytics-saas
+npm install
+```
 
-I also have a goal to make a lot of small SaaS apps this year, so this is fulfilling a personal need of being tired of implementing Stripe and Firebase over and over again.
+### 2. Firebase Setup
 
-## **Getting Started**
+1. Create a new Firebase project at [Firebase Console](https://console.firebase.google.com/)
+2. Enable Firebase Authentication (Email/Password)
+3. Enable Firestore Database
+4. Create a service account for Firebase Admin:
+   - Go to Project Settings > Service Accounts
+   - Click "Generate New Private Key"
+   - Save the JSON file securely
 
-To get started with FireSaaS:
+### 3. Environment Variables
 
-- **Clone the Repository**: Download the project to your local machine.
-- **Environment Setup**: Configure the necessary environment variables for Firebase, Stripe, and other services.
-- **Firebase and Stripe Configuration**: Follow the detailed setup instructions in our [documentation.](https://docs.firesaas.dev)
-- **Local Development**: Use `yarn dev` to start the development server locally.
+Copy `.env` and fill in your credentials (see `.env` file for all required variables).
 
-## **Documentation**
+### 4. Deploy Firebase Functions
 
-For detailed setup instructions, features, and guides, please refer to our [comprehensive documentation.](https://docs.firesaas.dev)
+```bash
+cd functions
+npm install
+firebase login
+firebase use --add  # Select your Firebase project
+firebase deploy --only functions
+```
 
-## **Support the Project**
+### 5. Run Development Server
 
-Visit https://firesaas.dev to learn more about the project. I take donations on that page.
+```bash
+npm run dev
+```
 
-## **Want me to build your SaaS app?**
+Visit [http://localhost:3000](http://localhost:3000)
 
-I do consulting, fill out the form on https://firesaas.dev or contact me on [Twitter](https://twitter.com/addicted_to_ai)
+## 🔒 Security Considerations
 
-## **Contributing**
+### Important: Scanner Execution Security
 
-Contributions are welcome! If you have ideas for improvements or encounter any issues, please feel free to open an issue or submit a pull request.
+The current implementation includes example code for executing Nmap scans. **Before production deployment**, you MUST:
+
+1. **Isolate Scanner Execution**: Use Docker containers or VMs
+2. **Input Validation**: Strictly validate scan targets
+3. **Rate Limiting**: Implement per-user scan limits
+4. **Target Authorization**: Verify users have permission to scan
+5. **Resource Management**: Set maximum scan duration and resource limits
+
+See `SCANNER_ARCHITECTURE.md` for detailed security guidelines.
+
+## 📁 Project Structure
+
+```
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── api/scans/         # Scanner API endpoints
+│   │   ├── app/dashboard/     # Scanner dashboard
+│   │   └── page.tsx           # Landing page
+│   ├── components/            # React components
+│   └── lib/                   # Utilities and types
+├── functions/                 # Firebase Functions
+│   └── src/
+│       └── scanProcessor.ts   # Scan execution logic
+└── SCANNER_ARCHITECTURE.md    # Architecture documentation
+```
+
+## 📝 Documentation
+
+- `SCANNER_ARCHITECTURE.md` - Detailed scanner service architecture
+- Full setup guide at [docs link]
+
+## ⚠️ Legal Notice
+
+This software is intended for authorized security testing only. Users are solely responsible for ensuring they have proper authorization before scanning any network or system. Unauthorized scanning may be illegal.
+
+---
+
+Built with ❤️ using [FireSaaS](https://firesaas.dev) template

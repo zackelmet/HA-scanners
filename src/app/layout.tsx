@@ -11,22 +11,22 @@ config.autoAddCss = false;
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "FireSaaS",
+  title: "HackerAnalytics - Hosted Security Scanners",
   description:
-    "FireSaaS helps you build your SaaS faster and easier using NextJS, Firebase and Stripe!",
-  metadataBase: new URL("https://firesaas.dev"),
+    "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and OpenVAS services on fast, optimized servers.",
+  metadataBase: new URL("https://hackeranalytics.com"),
   openGraph: {
-    title: "FireSaaS",
+    title: "HackerAnalytics - Hosted Security Scanners",
     description:
-      "FireSaaS helps you build your SaaS faster and easier using NextJS, Firebase and Stripe!",
-    url: "https://firesaas.dev",
-    siteName: "FireSaaS",
+      "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and OpenVAS services on fast, optimized servers.",
+    url: "https://hackeranalytics.com",
+    siteName: "HackerAnalytics",
   },
   twitter: {
     card: "summary_large_image",
-    title: "FireSaaS",
+    title: "HackerAnalytics - Hosted Security Scanners",
     description:
-      "FireSaaS helps you build your SaaS faster and easier using NextJS, Firebase and Stripe!",
+      "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and OpenVAS services on fast, optimized servers.",
   },
 };
 

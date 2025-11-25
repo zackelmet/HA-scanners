@@ -22,3 +22,6 @@ export const initializeNewUser = functions.auth.user().onCreate((user) => {
     photoURL: user.photoURL,
   });
 });
+
+// Export scanner functions
+export { processScanQueue } from "./scanProcessor";
