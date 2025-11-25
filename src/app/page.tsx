@@ -1,18 +1,47 @@
 "use client";
 
-import { useEffect } from "react";
+import PricingCard from "@/components/pricing/PricingCard";
 
 export default function Home() {
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://js.stripe.com/v3/pricing-table.js";
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
+  const pricingPlans = [
+    {
+      name: "Essential",
+      price: "$29",
+      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ESSENTIAL!,
+      features: [
+        "10 scans per month",
+        "Nmap scanning",
+        "Basic reports",
+        "Email support",
+      ],
+    },
+    {
+      name: "Pro",
+      price: "$99",
+      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO!,
+      features: [
+        "100 scans per month",
+        "Nmap + OpenVAS scanning",
+        "Advanced reports",
+        "API access",
+        "Priority support",
+      ],
+      popular: true,
+    },
+    {
+      name: "Scale",
+      price: "$299",
+      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_SCALE!,
+      features: [
+        "Unlimited scans",
+        "All scanning tools",
+        "Custom reports",
+        "Full API access",
+        "24/7 dedicated support",
+        "SLA guarantee",
+      ],
+    },
+  ];
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-base-100">
@@ -24,20 +53,12 @@ export default function Home() {
           </p>
         </div>
 
-        <stripe-pricing-table
-          pricing-table-id="prctbl_1SWO35053rHBeqKvZhlCUsJV"
-          publishable-key="pk_test_51SWKfn053rHBeqKvbwROb4YL0lpt9rkuODTwy25l8Br8W8y6i4qwnAgNalOEJSWvdyBrEZ47iehwHuWwgrH97bNW00LagWnNQq"
-        ></stripe-pricing-table>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {pricingPlans.map((plan) => (
+            <PricingCard key={plan.name} {...plan} />
+          ))}
+        </div>
       </div>
     </main>
   );
-}
-
-// TypeScript declaration for Stripe pricing table element
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      "stripe-pricing-table": any;
-    }
-  }
 }
