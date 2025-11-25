@@ -8,9 +8,12 @@ const admin = initializeAdmin();
 const db = admin.firestore();
 
 export async function POST(req: NextRequest) {
+  console.log("🔔 WEBHOOK RECEIVED - Starting processing...");
+
   const stripe = await getStripeServerSide();
 
   if (!stripe) {
+    console.error("❌ Stripe not initialized");
     return NextResponse.json(
       { error: "Stripe not initialized" },
       { status: 500 },
@@ -20,7 +23,10 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
 
+  console.log("📝 Webhook signature present:", !!sig);
+
   if (!sig) {
+    console.error("❌ No signature in webhook request");
     return NextResponse.json({ error: "No signature" }, { status: 400 });
   }
 
@@ -32,8 +38,11 @@ export async function POST(req: NextRequest) {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!,
     );
+    console.log("✅ Webhook signature verified successfully");
+    console.log("📦 Event type:", event.type);
+    console.log("📦 Event ID:", event.id);
   } catch (err: any) {
-    console.error("Webhook signature verification failed:", err.message);
+    console.error("❌ Webhook signature verification failed:", err.message);
     return NextResponse.json(
       { error: `Webhook Error: ${err.message}` },
       { status: 400 },
@@ -44,6 +53,7 @@ export async function POST(req: NextRequest) {
   try {
     switch (event.type) {
       case "checkout.session.completed":
+        console.log("🎉 Processing checkout.session.completed");
         await handleCheckoutCompleted(
           event.data.object as Stripe.Checkout.Session,
         );
@@ -82,15 +92,17 @@ export async function POST(req: NextRequest) {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  console.log("=== CHECKOUT COMPLETED ===");
+  console.log("=== CHECKOUT COMPLETED HANDLER ===");
   console.log("Session ID:", session.id);
   console.log("Customer:", session.customer);
   console.log("Subscription:", session.subscription);
+  console.log("Session metadata:", JSON.stringify(session.metadata));
 
   const userId = session.metadata?.firebase_uid;
 
   if (!userId) {
-    console.error("❌ No firebase_uid in session metadata!");
+    console.error("❌ CRITICAL: No firebase_uid in session metadata!");
+    console.error("Available metadata:", session.metadata);
     return;
   }
 
@@ -98,6 +110,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const customerId = session.customer as string;
   const subscriptionId = session.subscription as string;
+
+  console.log(`🔍 Looking up user ${userId} in Firestore...`);
 
   // Update user with customer ID if not already set
   const userRef = db.collection("users").doc(userId);
@@ -107,6 +121,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     console.error(`❌ User ${userId} not found in Firestore!`);
     return;
   }
+
+  console.log("✅ User found in Firestore");
+  console.log("🔄 Updating user with Stripe IDs...");
 
   await userRef.update({
     stripeCustomerId: customerId,
@@ -118,10 +135,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   // If subscription ID exists, fetch and process it
   if (subscriptionId) {
+    console.log(`🔍 Fetching subscription details for ${subscriptionId}...`);
     const stripe = await getStripeServerSide();
     if (stripe) {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       const priceId = subscription.items.data[0]?.price.id;
+      console.log(`📊 Subscription price ID: ${priceId}`);
+      console.log(`📊 Subscription status: ${subscription.status}`);
+
       await updateUserSubscription(
         userId,
         subscription,
@@ -129,7 +150,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         subscription.status,
       );
     }
+  } else {
+    console.warn(
+      "⚠️ No subscription ID in checkout session - one-time payment?",
+    );
   }
+
+  console.log("=== CHECKOUT COMPLETED - DONE ===");
 }
 
 async function handleSubscriptionChange(subscription: Stripe.Subscription) {
