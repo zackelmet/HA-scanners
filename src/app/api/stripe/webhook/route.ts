@@ -4,9 +4,6 @@ import { initializeAdmin } from "@/lib/firebase/firebaseAdmin";
 import Stripe from "stripe";
 import { PlanTier, PLAN_LIMITS } from "@/lib/types/user";
 
-const admin = initializeAdmin();
-const db = admin.firestore();
-
 // Disable body parsing so we can access raw body for webhook signature verification
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -130,6 +127,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   console.log(`🔍 Looking up user ${userId} in Firestore...`);
 
+  const admin = initializeAdmin();
+  const db = admin.firestore();
+
   // Update user with customer ID if not already set
   const userRef = db.collection("users").doc(userId);
   const userDoc = await userRef.get();
@@ -177,6 +177,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 }
 
 async function handleSubscriptionChange(subscription: Stripe.Subscription) {
+  const admin = initializeAdmin();
+  const db = admin.firestore();
+
   const customerId = subscription.customer as string;
   const subscriptionId = subscription.id;
   const status = subscription.status;
@@ -252,6 +255,9 @@ async function updateUserSubscription(
   priceId: string,
   status: string,
 ) {
+  const admin = initializeAdmin();
+  const db = admin.firestore();
+
   const subscriptionId = subscription.id;
   const customerId = subscription.customer as string;
   const productId = subscription.items.data[0]?.price.product as string;
@@ -338,6 +344,9 @@ async function updateUserSubscription(
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  const admin = initializeAdmin();
+  const db = admin.firestore();
+
   const customerId = subscription.customer as string;
   const subscriptionId = subscription.id;
 
@@ -385,6 +394,9 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
+  const admin = initializeAdmin();
+  const db = admin.firestore();
+
   const customerId = invoice.customer as string;
 
   // Find user
