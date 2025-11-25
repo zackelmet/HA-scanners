@@ -30,6 +30,12 @@ export default function PricingCard({
     setLoading(true);
 
     try {
+      console.log("Starting checkout with:", {
+        priceId,
+        userId: currentUser.uid,
+        email: currentUser.email,
+      });
+
       const response = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -41,6 +47,7 @@ export default function PricingCard({
       });
 
       const data = await response.json();
+      console.log("Checkout response:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to create checkout session");
@@ -50,7 +57,9 @@ export default function PricingCard({
       window.location.href = data.url;
     } catch (error) {
       console.error("Checkout error:", error);
-      alert("Failed to start checkout. Please try again.");
+      alert(
+        `Failed to start checkout: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
       setLoading(false);
     }
   };

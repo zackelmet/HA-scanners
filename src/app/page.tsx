@@ -3,11 +3,12 @@
 import PricingCard from "@/components/pricing/PricingCard";
 
 export default function Home() {
+  // Hardcode price IDs - they're public and safe to expose
   const pricingPlans = [
     {
       name: "Essential",
       price: "$29",
-      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ESSENTIAL!,
+      priceId: "price_1SWL2b053rHBeqKvm63qagHN", // Essential plan
       features: [
         "10 scans per month",
         "Nmap scanning",
@@ -18,7 +19,7 @@ export default function Home() {
     {
       name: "Pro",
       price: "$99",
-      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO!,
+      priceId: "price_1SWNxX053rHBeqKvAnt0iUYW", // Pro plan
       features: [
         "100 scans per month",
         "Nmap + OpenVAS scanning",
@@ -31,7 +32,7 @@ export default function Home() {
     {
       name: "Scale",
       price: "$299",
-      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_SCALE!,
+      priceId: "price_1SWNyr053rHBeqKvacwGtCaY", // Scale plan
       features: [
         "Unlimited scans",
         "All scanning tools",
