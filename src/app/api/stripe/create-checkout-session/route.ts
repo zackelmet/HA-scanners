@@ -69,6 +69,13 @@ export async function POST(req: NextRequest) {
 
     // Create checkout session
     console.log("Creating checkout session with price:", priceId);
+
+    // Get the origin from the request to build correct redirect URLs
+    const origin =
+      req.headers.get("origin") ||
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      "http://localhost:3001";
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ["card"],
@@ -79,8 +86,8 @@ export async function POST(req: NextRequest) {
         },
       ],
       mode: "subscription",
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/app/dashboard?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?canceled=true`,
+      success_url: `${origin}/app/dashboard?success=true`,
+      cancel_url: `${origin}/?canceled=true`,
       metadata: {
         firebase_uid: userId, // 🔑 CRITICAL: Link payment to Firebase user
       },
