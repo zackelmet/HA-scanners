@@ -4,3 +4,7 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[functions]
+  # Allow raw body for Stripe webhooks
+  included_files = ["**/*"]
