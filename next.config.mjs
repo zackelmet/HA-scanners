@@ -14,6 +14,7 @@ const nextConfig = {
     remotePatterns: [{ hostname: "images.ctfassets.net" }],
   },
   pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdx"],
+  skipTrailingSlashRedirect: true,
 };
 
 export default withMDX(nextConfig);
