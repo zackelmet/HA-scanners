@@ -109,8 +109,8 @@ export async function POST(request: NextRequest) {
     const scansThisMonth = userData.scansThisMonth || 0;
     const monthlyLimit = planLimits.monthlyScans;
 
-    // Check if limit reached
-    if (monthlyLimit !== -1 && scansThisMonth >= monthlyLimit) {
+    // Check if limit reached (0 means no scans allowed for free tier)
+    if (scansThisMonth >= monthlyLimit) {
       return NextResponse.json(
         {
           error: "Monthly scan limit reached",
@@ -156,8 +156,7 @@ export async function POST(request: NextRequest) {
           target,
           status: "queued",
         },
-        scansRemaining:
-          monthlyLimit === -1 ? "unlimited" : monthlyLimit - scansThisMonth - 1,
+        scansRemaining: monthlyLimit - scansThisMonth - 1,
       },
       { status: 201 },
     );

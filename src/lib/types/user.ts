@@ -6,7 +6,7 @@ export type SubscriptionStatus =
   | "past_due"
   | "trialing"
   | "none";
-export type PlanTier = "free" | "basic" | "pro" | "enterprise";
+export type PlanTier = "free" | "essential" | "pro" | "scale";
 
 export interface UserDocument {
   // Basic Info
@@ -25,7 +25,7 @@ export interface UserDocument {
   currentPeriodEnd?: Timestamp;
 
   // Scan Limits & Usage
-  monthlyScansLimit: number; // 10, 100, or -1 (unlimited)
+  monthlyScansLimit: number; // 500, 2500, 10000, or 0 (none)
   scansThisMonth: number; // Counter that resets monthly
   totalScansAllTime: number; // Lifetime counter
   lastScanDate?: Timestamp;
@@ -59,9 +59,9 @@ export const PLAN_LIMITS = {
       prioritySupport: false,
     },
   },
-  basic: {
-    tier: "basic" as PlanTier,
-    monthlyScans: 10,
+  essential: {
+    tier: "essential" as PlanTier,
+    monthlyScans: 500,
     features: {
       nmapEnabled: true,
       openvasEnabled: false,
@@ -72,7 +72,7 @@ export const PLAN_LIMITS = {
   },
   pro: {
     tier: "pro" as PlanTier,
-    monthlyScans: 100,
+    monthlyScans: 2500,
     features: {
       nmapEnabled: true,
       openvasEnabled: true,
@@ -81,9 +81,9 @@ export const PLAN_LIMITS = {
       prioritySupport: false,
     },
   },
-  enterprise: {
-    tier: "enterprise" as PlanTier,
-    monthlyScans: -1, // Unlimited
+  scale: {
+    tier: "scale" as PlanTier,
+    monthlyScans: 10000,
     features: {
       nmapEnabled: true,
       openvasEnabled: true,
