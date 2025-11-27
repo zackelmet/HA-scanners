@@ -22,6 +22,16 @@ export default function DashboardPage() {
     ? (userData?.monthlyScansLimit || 0) - (userData?.scansThisMonth || 0)
     : 0;
 
+  // Debug logging
+  console.log("🎯 Dashboard state:", {
+    loading,
+    hasActiveSubscription,
+    subscriptionStatus: userData?.subscriptionStatus,
+    currentPlan: userData?.currentPlan,
+    monthlyScansLimit: userData?.monthlyScansLimit,
+    scansRemaining,
+  });
+
   return (
     <main className="flex min-h-screen flex-col pb-10">
       <div className="w-full bg-base-200 py-8">
