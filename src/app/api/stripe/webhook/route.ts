@@ -288,6 +288,11 @@ async function updateUserSubscription(
 
   // Update user's subscription status and plan details
   console.log(`🔄 Updating user ${userId} in Firestore...`);
+  console.log(`📊 Setting:`, {
+    subscriptionStatus: status,
+    currentPlan: planTier,
+    monthlyScansLimit: planLimits.monthlyScans,
+  });
 
   await db
     .collection("users")
@@ -309,6 +314,9 @@ async function updateUserSubscription(
     });
 
   console.log("✅ Firestore update successful!");
+  console.log(
+    `✅ User ${userId} now has ${planTier} plan with ${planLimits.monthlyScans} scans/month`,
+  );
 
   // Update custom claims for authorization
   const role =
@@ -348,13 +356,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   const userId = usersSnapshot.docs[0].id;
 
-  // Update subscription document
-  await db.collection("subscriptions").doc(subscriptionId).update({
-    status: "canceled",
-    canceledAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  // Update user
+  // Update user document to cancel subscription
   await db.collection("users").doc(userId).update({
     subscriptionStatus: "canceled",
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
