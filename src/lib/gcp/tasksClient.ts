@@ -2,6 +2,16 @@ import { CloudTasksClient } from "@google-cloud/tasks";
 
 let tasksClient: CloudTasksClient | null = null;
 
+function parseServiceAccountKey(base64?: string) {
+  if (!base64) return null;
+  try {
+    const keyJson = Buffer.from(base64, "base64").toString("utf-8");
+    return JSON.parse(keyJson);
+  } catch (err) {
+    return null;
+  }
+}
+
 export interface ScanJob {
   scanId: string;
   userId: string;
@@ -64,6 +74,16 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
       url: functionUrl,
       headers: {
         "Content-Type": "application/json",
+      },
+      // Use OIDC token so the Cloud Function requires authentication
+      // The `audience` should be the Cloud Function URL (the same as `url`)
+      oidcToken: {
+        serviceAccountEmail:
+          process.env.GCP_TASKS_SERVICE_ACCOUNT_EMAIL ||
+          (parseServiceAccountKey(process.env.GCP_SERVICE_ACCOUNT_KEY)
+            ?.client_email as string) ||
+          "",
+        audience: functionUrl,
       },
       body: Buffer.from(JSON.stringify(job)).toString("base64"),
     },
