@@ -18,24 +18,39 @@ export function useUserData() {
       return;
     }
 
+    console.log(
+      "🔍 useUserData: Setting up listener for user:",
+      currentUser.uid,
+    );
+
     const userRef = doc(db, "users", currentUser.uid);
     const unsubscribe = onSnapshot(
       userRef,
       (doc) => {
         if (doc.exists()) {
-          setUserData(doc.data() as UserDocument);
+          const data = doc.data() as UserDocument;
+          console.log("📊 useUserData: User data updated:", {
+            subscriptionStatus: data.subscriptionStatus,
+            currentPlan: data.currentPlan,
+            monthlyScansLimit: data.monthlyScansLimit,
+          });
+          setUserData(data);
         } else {
+          console.warn("⚠️ useUserData: User document does not exist");
           setUserData(null);
         }
         setLoading(false);
       },
       (error) => {
-        console.error("Error fetching user data:", error);
+        console.error("❌ useUserData: Error fetching user data:", error);
         setLoading(false);
       },
     );
 
-    return () => unsubscribe();
+    return () => {
+      console.log("🔌 useUserData: Cleaning up listener");
+      unsubscribe();
+    };
   }, [currentUser]);
 
   return { userData, loading };
