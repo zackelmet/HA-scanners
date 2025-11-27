@@ -5,7 +5,9 @@ import {
   UserDocument,
   getPlanLimits,
   needsMonthlyReset,
+  ScanMetadata,
 } from "@/lib/types/user";
+import { enqueueScanJob } from "@/lib/gcp/tasksClient";
 
 export async function POST(request: NextRequest) {
   try {

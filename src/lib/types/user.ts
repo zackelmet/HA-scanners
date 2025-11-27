@@ -40,10 +40,29 @@ export interface UserDocument {
     prioritySupport: boolean;
   };
 
+  // Scan Results (last 30 days, metadata only)
+  completedScans?: ScanMetadata[];
+
   // Optional Metadata
   lastLoginAt?: Timestamp;
   profileImageUrl?: string;
   companyName?: string;
+}
+
+export interface ScanMetadata {
+  scanId: string;
+  type: "nmap" | "openvas";
+  target: string;
+  status: "queued" | "running" | "completed" | "failed";
+  startTime: Timestamp;
+  endTime?: Timestamp;
+  resultsSummary?: {
+    portsFound?: number;
+    vulnerabilities?: number;
+    severity?: "low" | "medium" | "high" | "critical";
+  };
+  gcpStorageUrl?: string; // Signed URL to full scan results in Cloud Storage
+  errorMessage?: string;
 }
 
 // Plan configuration constants
