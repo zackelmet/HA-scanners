@@ -29,14 +29,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Get raw body as Buffer for signature verification
-  const buf = await req.arrayBuffer();
-  const rawBody = Buffer.from(buf);
-  const bodyString = rawBody.toString("utf8");
+  // Get raw body as text for signature verification
+  const body = await req.text();
   const sig = req.headers.get("stripe-signature");
 
   console.log("📝 Webhook signature present:", !!sig);
-  console.log("📝 Raw body length:", rawBody.length);
+  console.log("📝 Raw body length:", body.length);
+  console.log(
+    "📝 Webhook secret configured:",
+    !!process.env.STRIPE_WEBHOOK_SECRET,
+  );
 
   if (!sig) {
     console.error("❌ No signature in webhook request");
@@ -46,9 +48,9 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    // Use the string version for signature verification
+    // Use the text directly for signature verification
     event = stripe.webhooks.constructEvent(
-      bodyString,
+      body,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!,
     );
@@ -260,29 +262,11 @@ async function updateUserSubscription(
 
   const subscriptionId = subscription.id;
   const customerId = subscription.customer as string;
-  const productId = subscription.items.data[0]?.price.product as string;
 
-  // Update or create subscription document
-  const subscriptionRef = db.collection("subscriptions").doc(subscriptionId);
-
-  await subscriptionRef.set(
-    {
-      userId,
-      stripeSubscriptionId: subscriptionId,
-      stripeCustomerId: customerId,
-      status,
-      priceId,
-      productId,
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    },
-    { merge: true },
-  );
+  console.log(`🔄 Updating subscription data for user ${userId}...`);
 
   // Determine plan tier from price ID
-  let planTier: PlanTier = "basic";
+  let planTier: PlanTier = "essential";
 
   // Map Stripe price IDs to plan tiers
   const essentialPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ESSENTIAL;
@@ -290,11 +274,11 @@ async function updateUserSubscription(
   const scalePriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_SCALE;
 
   if (priceId === essentialPriceId) {
-    planTier = "basic";
+    planTier = "essential";
   } else if (priceId === proPriceId) {
     planTier = "pro";
   } else if (priceId === scalePriceId) {
-    planTier = "enterprise";
+    planTier = "scale";
   }
 
   const planLimits = PLAN_LIMITS[planTier];
