@@ -7,7 +7,6 @@ import {
   needsMonthlyReset,
   ScanMetadata,
 } from "@/lib/types/user";
-import { enqueueScanJob } from "@/lib/gcp/tasksClient";
 
 export async function POST(request: NextRequest) {
   try {
@@ -163,14 +162,18 @@ export async function POST(request: NextRequest) {
 
     // Enqueue the scan job to Cloud Tasks (Cloud Run worker will process it)
     try {
-      await enqueueScanJob({
-        scanId: scanRef.id,
-        userId,
-        type,
-        target,
-        options,
-        callbackUrl: process.env.VERCEL_WEBHOOK_URL || "",
-      });
+      const tasksModule = await import("@/lib/gcp/tasksClient");
+      const enqueue = tasksModule.enqueueScanJob;
+      if (enqueue) {
+        await enqueue({
+          scanId: scanRef.id,
+          userId,
+          type,
+          target,
+          options,
+          callbackUrl: process.env.VERCEL_WEBHOOK_URL || "",
+        });
+      }
     } catch (err) {
       console.error("Failed to enqueue scan job:", err);
       // We don't fail the request here — the scan doc + metadata exist. Return

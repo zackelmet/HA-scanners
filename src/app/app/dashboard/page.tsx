@@ -24,12 +24,12 @@ export default function DashboardPage() {
     : 0;
 
   // Form state
-  const [scannerType, setScannerType] = useState<"nmap" | "openvas">("nmap");
+  const [scannerType, setScannerType] = useState("nmap" as "nmap" | "openvas");
   const [targetInput, setTargetInput] = useState("");
   const [optionsInput, setOptionsInput] = useState("");
   const [Submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState(null as string | null);
+  const [submitSuccess, setSubmitSuccess] = useState(null as string | null);
 
   // Debug logging
   console.log("🎯 Dashboard state:", {
@@ -241,7 +241,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             ) : (
-              {/* SCAN FORM - Show when subscribed */}
               <div className="card bg-base-100 shadow-xl">
                 <div className="card-body">
                   <h2 className="card-title mb-6">Create New Scan</h2>
@@ -273,7 +272,9 @@ export default function DashboardPage() {
 
                         const data = await res.json();
                         if (!res.ok) {
-                          setSubmitError(data?.error || "Failed to create scan");
+                          setSubmitError(
+                            data?.error || "Failed to create scan",
+                          );
                         } else {
                           setSubmitSuccess(
                             `Scan queued: ${data.scanId || "queued"}`,
@@ -302,7 +303,9 @@ export default function DashboardPage() {
                         }
                       >
                         <option value="nmap">Nmap - Network Scanner</option>
-                        <option value="openvas">OpenVAS - Vulnerability Assessment</option>
+                        <option value="openvas">
+                          OpenVAS - Vulnerability Assessment
+                        </option>
                       </select>
                     </div>
 
@@ -345,10 +348,14 @@ export default function DashboardPage() {
                     </div>
 
                     {submitError && (
-                      <div className="alert alert-error mt-4">{submitError}</div>
+                      <div className="alert alert-error mt-4">
+                        {submitError}
+                      </div>
                     )}
                     {submitSuccess && (
-                      <div className="alert alert-success mt-4">{submitSuccess}</div>
+                      <div className="alert alert-success mt-4">
+                        {submitSuccess}
+                      </div>
                     )}
                   </form>
 
@@ -419,48 +426,75 @@ export default function DashboardPage() {
                       <th>Actions</th>
                     </tr>
                   </thead>
-                          <tbody>
-                            {userData?.completedScans && userData.completedScans.length > 0 ? (
-                              userData.completedScans
-                                .slice()
-                                .reverse()
-                                .map((scan: any) => {
-                                  const toDate = (ts: any) =>
-                                    ts?.toDate ? ts.toDate().toLocaleString() : ts ? new Date(ts).toLocaleString() : "-";
-                                  const duration = scan.startTime && scan.endTime
-                                    ? Math.max(0, (scan.endTime.toDate ? scan.endTime.toDate().getTime() : new Date(scan.endTime).getTime()) - (scan.startTime.toDate ? scan.startTime.toDate().getTime() : new Date(scan.startTime).getTime())) / 1000
-                                    : "-";
+                  <tbody>
+                    {userData?.completedScans &&
+                    userData.completedScans.length > 0 ? (
+                      userData.completedScans
+                        .slice()
+                        .reverse()
+                        .map((scan: any) => {
+                          const toDate = (ts: any) =>
+                            ts?.toDate
+                              ? ts.toDate().toLocaleString()
+                              : ts
+                                ? new Date(ts).toLocaleString()
+                                : "-";
+                          const duration =
+                            scan.startTime && scan.endTime
+                              ? Math.max(
+                                  0,
+                                  (scan.endTime.toDate
+                                    ? scan.endTime.toDate().getTime()
+                                    : new Date(scan.endTime).getTime()) -
+                                    (scan.startTime.toDate
+                                      ? scan.startTime.toDate().getTime()
+                                      : new Date(scan.startTime).getTime()),
+                                ) / 1000
+                              : "-";
 
-                                  return (
-                                    <tr key={scan.scanId}>
-                                      <td>{scan.scanId}</td>
-                                      <td>{scan.type}</td>
-                                      <td>{scan.target}</td>
-                                      <td>{scan.status}</td>
-                                      <td>{toDate(scan.startTime)}</td>
-                                      <td>{typeof duration === "number" ? `${duration}s` : duration}</td>
-                                      <td className="max-w-xs truncate">{scan.resultsSummary || scan.errorMessage || "-"}</td>
-                                      <td>
-                                        {scan.gcpStorageUrl ? (
-                                          <a href={scan.gcpStorageUrl} target="_blank" rel="noreferrer" className="link">
-                                            View
-                                          </a>
-                                        ) : (
-                                          <span className="opacity-60">—</span>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  );
-                                })
-                            ) : (
-                              <tr>
-                                <td colSpan={8} className="text-center opacity-60">
-                                  No scan history available. Your completed scans will
-                                  appear here.
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
+                          return (
+                            <tr key={scan.scanId}>
+                              <td>{scan.scanId}</td>
+                              <td>{scan.type}</td>
+                              <td>{scan.target}</td>
+                              <td>{scan.status}</td>
+                              <td>{toDate(scan.startTime)}</td>
+                              <td>
+                                {typeof duration === "number"
+                                  ? `${duration}s`
+                                  : duration}
+                              </td>
+                              <td className="max-w-xs truncate">
+                                {scan.resultsSummary ||
+                                  scan.errorMessage ||
+                                  "-"}
+                              </td>
+                              <td>
+                                {scan.gcpStorageUrl ? (
+                                  <a
+                                    href={scan.gcpStorageUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="link"
+                                  >
+                                    View
+                                  </a>
+                                ) : (
+                                  <span className="opacity-60">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="text-center opacity-60">
+                          No scan history available. Your completed scans will
+                          appear here.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
                 </table>
               </div>
             </div>
