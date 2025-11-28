@@ -136,16 +136,46 @@ export async function POST(request: NextRequest) {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Update user's scan counters
+    // Prepare lightweight metadata to keep on the user's document so the
+    // dashboard + webhook can update it in-place. The webhook expects an
+    // entry in `user.completedScans` to exist so it can map and update it.
+    const scanMeta = {
+      scanId: scanRef.id,
+      status: "queued",
+      type,
+      target,
+      startTime: admin.firestore.FieldValue.serverTimestamp(),
+      // placeholders to be populated by the worker/webhook
+      endTime: null,
+      resultsSummary: null,
+      gcpStorageUrl: null,
+      errorMessage: null,
+    };
+
+    // Atomically update user's counters and append the scan metadata
     await userDocRef.update({
       scansThisMonth: admin.firestore.FieldValue.increment(1),
       totalScansAllTime: admin.firestore.FieldValue.increment(1),
       lastScanDate: admin.firestore.FieldValue.serverTimestamp(),
+      completedScans: admin.firestore.FieldValue.arrayUnion(scanMeta),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // TODO: Add message to Azure Queue Storage for processing
-    // await addToAzureQueue({ scanId: scanRef.id, userId, type, target, options });
+    // Enqueue the scan job to Cloud Tasks (Cloud Run worker will process it)
+    try {
+      await enqueueScanJob({
+        scanId: scanRef.id,
+        userId,
+        type,
+        target,
+        options,
+        callbackUrl: process.env.VERCEL_WEBHOOK_URL || "",
+      });
+    } catch (err) {
+      console.error("Failed to enqueue scan job:", err);
+      // We don't fail the request here — the scan doc + metadata exist. Return
+      // partial success but include a warning so UI can inform the user.
+    }
 
     return NextResponse.json(
       {
