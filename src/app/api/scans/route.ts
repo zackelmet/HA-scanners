@@ -168,6 +168,28 @@ export async function POST(request: NextRequest) {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
+    // Also write a per-user subcollection document for scalable per-user queries
+    try {
+      const userScanRef = firestore
+        .collection("users")
+        .doc(userId)
+        .collection("completedScans")
+        .doc(scanRef.id);
+
+      await userScanRef.set({
+        scanId: scanRef.id,
+        status: "queued",
+        type,
+        target,
+        startTime: admin.firestore.FieldValue.serverTimestamp(),
+        resultsSummary: null,
+        gcpStorageUrl: null,
+        errorMessage: null,
+      });
+    } catch (err) {
+      console.error("Failed to write user subcollection scan doc:", err);
+    }
+
     // Enqueue the scan job to Cloud Tasks (Cloud Run worker will process it)
     try {
       const tasksModule = await import("@/lib/gcp/tasksClient");
