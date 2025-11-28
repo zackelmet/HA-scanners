@@ -42,10 +42,18 @@ export async function POST(request: NextRequest) {
     const body: CreateScanRequest = await request.json();
     const { type, target, options } = body;
 
-    // Validate input
-    if (!type || !target || !options) {
+    // Normalize options (client may send empty string or null)
+    const normalizedOptions =
+      options == null
+        ? {}
+        : typeof (options as any) === "string" && (options as any).trim() === ""
+          ? {}
+          : options;
+
+    // Validate input (options are optional)
+    if (!type || !target) {
       return NextResponse.json(
-        { error: "Missing required fields: type, target, options" },
+        { error: "Missing required fields: type, target" },
         { status: 400 },
       );
     }
@@ -129,7 +137,7 @@ export async function POST(request: NextRequest) {
       userId,
       type,
       target,
-      options,
+      options: normalizedOptions,
       status: "queued",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -170,7 +178,7 @@ export async function POST(request: NextRequest) {
           userId,
           type,
           target,
-          options,
+          options: normalizedOptions,
           callbackUrl: process.env.VERCEL_WEBHOOK_URL || "",
         });
       }
