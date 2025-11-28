@@ -11,6 +11,17 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const admin = initializeAdmin();
+    // Ensure Admin SDK initialized correctly
+    if (!admin.apps || admin.apps.length === 0) {
+      console.error("Firebase Admin SDK not initialized");
+      return NextResponse.json(
+        {
+          error: "Server misconfiguration: Firebase Admin SDK not initialized",
+        },
+        { status: 500 },
+      );
+    }
+
     const auth = admin.auth();
     const firestore = admin.firestore();
 
@@ -143,28 +154,11 @@ export async function POST(request: NextRequest) {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Prepare lightweight metadata to keep on the user's document so the
-    // dashboard + webhook can update it in-place. The webhook expects an
-    // entry in `user.completedScans` to exist so it can map and update it.
-    const scanMeta = {
-      scanId: scanRef.id,
-      status: "queued",
-      type,
-      target,
-      startTime: admin.firestore.FieldValue.serverTimestamp(),
-      // placeholders to be populated by the worker/webhook
-      endTime: null,
-      resultsSummary: null,
-      gcpStorageUrl: null,
-      errorMessage: null,
-    };
-
-    // Atomically update user's counters and append the scan metadata
+    // Atomically update user's counters (we no longer write legacy arrays).
     await userDocRef.update({
       scansThisMonth: admin.firestore.FieldValue.increment(1),
       totalScansAllTime: admin.firestore.FieldValue.increment(1),
       lastScanDate: admin.firestore.FieldValue.serverTimestamp(),
-      completedScans: admin.firestore.FieldValue.arrayUnion(scanMeta),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
