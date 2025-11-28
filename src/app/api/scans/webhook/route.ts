@@ -28,40 +28,51 @@ export async function POST(request: NextRequest) {
 
     console.log(`📥 Webhook received for scan ${scanId}:`, status);
 
-    // Get user document
-    const userRef = firestore.collection("users").doc(userId);
-    const userDoc = await userRef.get();
+    // Update per-user subcollection document for this scan (preferred)
+    const userScanRef = firestore
+      .collection("users")
+      .doc(userId)
+      .collection("completedScans")
+      .doc(scanId);
 
-    if (!userDoc.exists) {
-      console.error(`User ${userId} not found`);
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    try {
+      const now = admin.firestore.Timestamp.now();
 
-    const userData = userDoc.data();
-    const completedScans = userData?.completedScans || [];
-
-    // Update the scan metadata in the array
-    const updatedScans = completedScans.map((scan: ScanMetadata) => {
-      if (scan.scanId === scanId) {
-        return {
-          ...scan,
+      // Merge the update into the user's scan doc (create if missing)
+      await userScanRef.set(
+        {
           status,
-          endTime: admin.firestore.Timestamp.now(),
-          resultsSummary: resultsSummary || scan.resultsSummary,
-          gcpStorageUrl: gcpStorageUrl || scan.gcpStorageUrl,
-          errorMessage: errorMessage || scan.errorMessage,
-        };
-      }
-      return scan;
-    });
+          endTime: now,
+          resultsSummary: resultsSummary || null,
+          gcpStorageUrl: gcpStorageUrl || null,
+          errorMessage: errorMessage || null,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
 
-    // Update user document with updated scan metadata
-    await userRef.update({
-      completedScans: updatedScans,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+      // Also update the global scan document for audit
+      const globalScanRef = firestore.collection("scans").doc(scanId);
+      await globalScanRef.update({
+        status,
+        resultsSummary: resultsSummary || null,
+        gcpStorageUrl: gcpStorageUrl || null,
+        errorMessage: errorMessage || null,
+        endTime: now,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
-    console.log(`✅ Updated scan ${scanId} status to ${status}`);
+      console.log(`✅ Updated scan ${scanId} status to ${status}`);
+    } catch (err: any) {
+      console.error(
+        "Failed to update per-user scan doc or global scan doc:",
+        err,
+      );
+      return NextResponse.json(
+        { error: "Failed to update scan metadata" },
+        { status: 500 },
+      );
+    }
 
     return NextResponse.json({
       success: true,

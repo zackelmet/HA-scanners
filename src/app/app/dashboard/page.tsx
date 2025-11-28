@@ -12,11 +12,17 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useUserData } from "@/lib/hooks/useUserData";
+import { useUserScans } from "@/lib/hooks/useUserScans";
+import { useAuth } from "@/lib/context/AuthContext";
 import { auth } from "@/lib/firebase/firebaseClient";
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const { userData, loading } = useUserData();
+  const { currentUser } = useAuth();
+  const { scans: userScans = [], loading: scansLoading } = useUserScans(
+    currentUser?.uid ?? null,
+  );
 
   const hasActiveSubscription = userData?.subscriptionStatus === "active";
   const scansRemaining = hasActiveSubscription
@@ -427,65 +433,65 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {userData?.completedScans &&
-                    userData.completedScans.length > 0 ? (
-                      userData.completedScans
-                        .slice()
-                        .reverse()
-                        .map((scan: any) => {
-                          const toDate = (ts: any) =>
-                            ts?.toDate
-                              ? ts.toDate().toLocaleString()
-                              : ts
-                                ? new Date(ts).toLocaleString()
-                                : "-";
-                          const duration =
-                            scan.startTime && scan.endTime
-                              ? Math.max(
-                                  0,
-                                  (scan.endTime.toDate
-                                    ? scan.endTime.toDate().getTime()
-                                    : new Date(scan.endTime).getTime()) -
-                                    (scan.startTime.toDate
-                                      ? scan.startTime.toDate().getTime()
-                                      : new Date(scan.startTime).getTime()),
-                                ) / 1000
+                    {scansLoading ? (
+                      <tr>
+                        <td colSpan={8} className="text-center opacity-70">
+                          Loading scans...
+                        </td>
+                      </tr>
+                    ) : userScans && userScans.length > 0 ? (
+                      userScans.slice().map((scan: any) => {
+                        const toDate = (ts: any) =>
+                          ts?.toDate
+                            ? ts.toDate().toLocaleString()
+                            : ts
+                              ? new Date(ts).toLocaleString()
                               : "-";
+                        const duration =
+                          scan.startTime && scan.endTime
+                            ? Math.max(
+                                0,
+                                (scan.endTime.toDate
+                                  ? scan.endTime.toDate().getTime()
+                                  : new Date(scan.endTime).getTime()) -
+                                  (scan.startTime.toDate
+                                    ? scan.startTime.toDate().getTime()
+                                    : new Date(scan.startTime).getTime()),
+                              ) / 1000
+                            : "-";
 
-                          return (
-                            <tr key={scan.scanId}>
-                              <td>{scan.scanId}</td>
-                              <td>{scan.type}</td>
-                              <td>{scan.target}</td>
-                              <td>{scan.status}</td>
-                              <td>{toDate(scan.startTime)}</td>
-                              <td>
-                                {typeof duration === "number"
-                                  ? `${duration}s`
-                                  : duration}
-                              </td>
-                              <td className="max-w-xs truncate">
-                                {scan.resultsSummary ||
-                                  scan.errorMessage ||
-                                  "-"}
-                              </td>
-                              <td>
-                                {scan.gcpStorageUrl ? (
-                                  <a
-                                    href={scan.gcpStorageUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="link"
-                                  >
-                                    View
-                                  </a>
-                                ) : (
-                                  <span className="opacity-60">—</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })
+                        return (
+                          <tr key={scan.scanId}>
+                            <td>{scan.scanId}</td>
+                            <td>{scan.type}</td>
+                            <td>{scan.target}</td>
+                            <td>{scan.status}</td>
+                            <td>{toDate(scan.startTime)}</td>
+                            <td>
+                              {typeof duration === "number"
+                                ? `${duration}s`
+                                : duration}
+                            </td>
+                            <td className="max-w-xs truncate">
+                              {scan.resultsSummary || scan.errorMessage || "-"}
+                            </td>
+                            <td>
+                              {scan.gcpStorageUrl ? (
+                                <a
+                                  href={scan.gcpStorageUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="link"
+                                >
+                                  View
+                                </a>
+                              ) : (
+                                <span className="opacity-60">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
                         <td colSpan={8} className="text-center opacity-60">
