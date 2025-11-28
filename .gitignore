@@ -36,3 +36,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 gcp/functions/process-scan/google-cloud-sdk/
+# GCP service account keys (do not commit)
+gcp/keys/*.json
