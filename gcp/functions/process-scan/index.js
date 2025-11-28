@@ -35,10 +35,10 @@ app.post("/process", async (req, res) => {
       contentType: "application/json",
     });
 
-    // Notify the SaaS webhook with metadata
+    // Notify the SaaS webhook with metadata and log response for debugging
     if (WEBHOOK_URL) {
       try {
-        await fetch(WEBHOOK_URL, {
+        const resp = await fetch(WEBHOOK_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -51,6 +51,17 @@ app.post("/process", async (req, res) => {
             status: "done",
           }),
         });
+
+        console.log("webhook POST completed", {
+          url: WEBHOOK_URL,
+          status: resp.status,
+        });
+        try {
+          const text = await resp.text();
+          console.log("webhook response body:", text);
+        } catch (e) {
+          console.warn("could not read webhook response body", e);
+        }
       } catch (err) {
         console.warn("Failed to call webhook:", err);
       }
