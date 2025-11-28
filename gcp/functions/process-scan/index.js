@@ -1,27 +1,31 @@
+const express = require("express");
+const bodyParser = require("body-parser");
 const { Storage } = require("@google-cloud/storage");
 const fetch = require("node-fetch");
+
+const app = express();
+app.use(bodyParser.json({ limit: "1mb" }));
 
 const storage = new Storage();
 const BUCKET = process.env.GCP_BUCKET_NAME;
 const WEBHOOK_URL = process.env.VERCEL_WEBHOOK_URL; // e.g. https://your-app.vercel.app/api/scans/webhook
 const WEBHOOK_SECRET = process.env.GCP_WEBHOOK_SECRET;
 
-exports.scanProcessor = async (req, res) => {
-  // Basic auth: expect Cloud Tasks to call with OIDC; additional checks can be implemented
+// POST /process - Cloud Tasks will POST job payload here
+app.post("/process", async (req, res) => {
   try {
-    const job = req.body;
+    const job = req.body || {};
 
     const scanId = job.scanId || `scan-${Date.now()}`;
     const userId = job.userId || "unknown";
 
-    // TODO: Run real scanner (nmap/openvas) here. For now, generate a dummy result.
+    // TODO: Replace with real scanner invocation (nmap/openvas). This is a placeholder.
     const results = {
       scanId,
       userId,
       target: job.target,
       type: job.type,
-      summary:
-        "This is a placeholder result. Replace with real scanner output.",
+      summary: "Placeholder result. Replace with scanner output in production.",
       timestamp: Date.now(),
     };
 
@@ -31,26 +35,40 @@ exports.scanProcessor = async (req, res) => {
       contentType: "application/json",
     });
 
-    // Optionally notify your SaaS webhook with the result metadata
+    // Notify the SaaS webhook with metadata
     if (WEBHOOK_URL) {
-      await fetch(WEBHOOK_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-gcp-webhook-secret": WEBHOOK_SECRET || "",
-        },
-        body: JSON.stringify({
-          scanId,
-          userId,
-          gcsPath: `gs://${BUCKET}/${destPath}`,
-          status: "done",
-        }),
-      });
+      try {
+        await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-gcp-webhook-secret": WEBHOOK_SECRET || "",
+          },
+          body: JSON.stringify({
+            scanId,
+            userId,
+            gcsPath: `gs://${BUCKET}/${destPath}`,
+            status: "done",
+          }),
+        });
+      } catch (err) {
+        console.warn("Failed to call webhook:", err);
+      }
     }
 
-    res.status(200).send({ success: true });
+    res.status(200).json({ success: true, scanId });
   } catch (err) {
     console.error("scanProcessor error", err);
-    res.status(500).send({ error: String(err) });
+    res.status(500).json({ error: String(err) });
   }
-};
+});
+
+// Health check
+app.get("/_health", (req, res) => res.status(200).send("ok"));
+
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  console.log(`process-scan listening on port ${PORT}`);
+});
+
+module.exports = app;

@@ -35,3 +35,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+gcp/functions/process-scan/google-cloud-sdk/
