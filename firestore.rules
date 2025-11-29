@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Allow users to read/write their own user doc and subcollections
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      match /completedScans/{scanId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        // Creation of user-visible entries can be allowed for client
+        allow create: if request.auth != null && request.auth.uid == userId;
+        // Updates/deletes should generally be server-only (Admin SDK).
+        allow update, delete: if false;
+      }
+    }
+
+    // Allow users to read their own global scans (used by fallback queries)
+    match /scans/{scanId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Prevent client-side writes to global scans (server/admin only)
+      allow write: if false;
+    }
+  }
+}
