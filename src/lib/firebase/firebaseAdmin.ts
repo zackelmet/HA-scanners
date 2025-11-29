@@ -29,6 +29,7 @@ export const initializeAdmin = () => {
       console.log("Firebase Admin Initialized");
     } catch (error) {
       console.error("Firebase admin initialization error", error);
+      throw error;
     }
   }
   return admin;
