@@ -162,14 +162,14 @@ export async function POST(request: NextRequest) {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Also write a per-user subcollection document for scalable per-user queries
-    try {
-      const userScanRef = firestore
-        .collection("users")
-        .doc(userId)
-        .collection("completedScans")
-        .doc(scanRef.id);
+    // Prepare per-user subcollection ref for scalable per-user queries
+    const userScanRef = firestore
+      .collection("users")
+      .doc(userId)
+      .collection("completedScans")
+      .doc(scanRef.id);
 
+    try {
       await userScanRef.set({
         scanId: scanRef.id,
         status: "queued",
@@ -185,6 +185,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Enqueue the scan job to Cloud Tasks (Cloud Run worker will process it)
+    let enqueueSucceeded = false;
     try {
       const tasksModule = await import("@/lib/gcp/tasksClient");
       const enqueue = tasksModule.enqueueScanJob;
@@ -197,11 +198,32 @@ export async function POST(request: NextRequest) {
           options: normalizedOptions,
           callbackUrl: process.env.VERCEL_WEBHOOK_URL || "",
         });
+        enqueueSucceeded = true;
       }
     } catch (err) {
       console.error("Failed to enqueue scan job:", err);
       // We don't fail the request here — the scan doc + metadata exist. Return
       // partial success but include a warning so UI can inform the user.
+    }
+
+    // If enqueue succeeded, mark scan as in-progress so the UI shows it
+    if (enqueueSucceeded) {
+      try {
+        const now = admin.firestore.FieldValue.serverTimestamp();
+        await firestore.collection("scans").doc(scanRef.id).update({
+          status: "in_progress",
+          startTime: now,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        await userScanRef.update({
+          status: "in_progress",
+          startTime: now,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (err) {
+        console.error("Failed to mark scan in_progress after enqueue:", err);
+      }
     }
 
     return NextResponse.json(
