@@ -473,7 +473,37 @@ export default function DashboardPage() {
                                 : duration}
                             </td>
                             <td className="max-w-xs truncate">
-                              {scan.resultsSummary || scan.errorMessage || "-"}
+                              {(() => {
+                                const rs = scan.resultsSummary;
+                                if (!rs) return scan.errorMessage || "-";
+                                // If resultsSummary is a string (legacy), show it
+                                if (typeof rs === "string") return rs;
+                                // If worker provided a human-readable summaryText, show that
+                                if ((rs as any).summaryText)
+                                  return (rs as any).summaryText;
+                                // Otherwise, fall back to a small structured summary
+                                const parts: string[] = [];
+                                if ((rs as any).totalHosts !== undefined)
+                                  parts.push(`${(rs as any).totalHosts} hosts`);
+                                if ((rs as any).openPorts !== undefined)
+                                  parts.push(
+                                    `${(rs as any).openPorts} open ports`,
+                                  );
+                                if ((rs as any).vulnerabilities) {
+                                  const v = (rs as any).vulnerabilities;
+                                  const vulnParts: string[] = [];
+                                  if (v.critical)
+                                    vulnParts.push(`C:${v.critical}`);
+                                  if (v.high) vulnParts.push(`H:${v.high}`);
+                                  if (v.medium) vulnParts.push(`M:${v.medium}`);
+                                  if (v.low) vulnParts.push(`L:${v.low}`);
+                                  if (vulnParts.length)
+                                    parts.push(`vuln ${vulnParts.join("/")}`);
+                                }
+                                return parts.length > 0
+                                  ? parts.join(" • ")
+                                  : "-";
+                              })()}
                             </td>
                             <td>
                               {scan.gcpStorageUrl ? (

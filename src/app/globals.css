@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom theme overrides */
+body {
+	/* Background color requested */
+	background-color: #0a0a2300;
+}
+
+/* Override DaisyUI theme variables for the active theme */
+body[data-theme="cupcake"] {
+	/* 1st accent / primary color override */
+	--primary: #0a0a2300;
+	--accent: #0a0a2300;
+}

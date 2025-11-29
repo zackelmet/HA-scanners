@@ -11,20 +11,20 @@ config.autoAddCss = false;
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "HackerAnalytics - Hosted Security Scanners",
+  title: "HA - Hosted Scanners",
   description:
     "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and OpenVAS services on fast, optimized servers.",
   metadataBase: new URL("https://hackeranalytics.com"),
   openGraph: {
-    title: "HackerAnalytics - Hosted Security Scanners",
+    title: "HA - Hosted Scanners",
     description:
       "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and OpenVAS services on fast, optimized servers.",
     url: "https://hackeranalytics.com",
-    siteName: "HackerAnalytics",
+    siteName: "HA",
   },
   twitter: {
     card: "summary_large_image",
-    title: "HackerAnalytics - Hosted Security Scanners",
+    title: "HA - Hosted Scanners",
     description:
       "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and OpenVAS services on fast, optimized servers.",
   },
