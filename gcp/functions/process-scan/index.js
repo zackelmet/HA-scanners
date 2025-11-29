@@ -38,6 +38,26 @@ app.post("/process", async (req, res) => {
     // Notify the SaaS webhook with metadata and log response for debugging
     if (WEBHOOK_URL) {
       try {
+        // Build structured resultsSummary so the SaaS can display Duration/Findings/Actions
+        const gcsUrl = `gs://${BUCKET}/${destPath}`;
+        const resultsSummary = {
+          totalHosts: 1,
+          hostsUp: 1,
+          totalPorts: 0,
+          openPorts: 0,
+          vulnerabilities: {
+            critical: 0,
+            high: 0,
+            medium: 0,
+            low: 0,
+          },
+          // Placeholder duration (seconds) — replace with actual timing from real scanner
+          scanDuration: 0,
+          // Keep a human-readable summary as well
+          summaryText: results.summary || null,
+          findings: [],
+        };
+
         const resp = await fetch(WEBHOOK_URL, {
           method: "POST",
           headers: {
@@ -47,8 +67,10 @@ app.post("/process", async (req, res) => {
           body: JSON.stringify({
             scanId,
             userId,
-            gcsPath: `gs://${BUCKET}/${destPath}`,
-            status: "done",
+            // Use the canonical keys the SaaS expects
+            gcpStorageUrl: gcsUrl,
+            resultsSummary,
+            status: "completed",
           }),
         });
 
