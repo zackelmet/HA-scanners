@@ -7,11 +7,13 @@ export async function POST(request: NextRequest) {
     const admin = initializeAdmin();
     const firestore = admin.firestore();
 
-    // Verify webhook signature
+    // Verify webhook signature. Accept either header name so workers and
+    // functions with different header naming conventions both work.
     const webhookSecret = process.env.GCP_WEBHOOK_SECRET;
-    const signature = request.headers.get("x-webhook-signature");
+    const sig1 = request.headers.get("x-webhook-signature");
+    const sig2 = request.headers.get("x-gcp-webhook-secret");
 
-    if (webhookSecret && signature !== webhookSecret) {
+    if (webhookSecret && webhookSecret !== (sig1 || sig2)) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
