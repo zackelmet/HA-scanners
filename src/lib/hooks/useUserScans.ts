@@ -75,8 +75,42 @@ export function useUserScans(uid?: string | null) {
         setScans(items);
         setLoading(false);
       },
-      (err) => {
+      async (err) => {
         console.error("useUserScans: snapshot error", err);
+        // Try fallback to global scans query if snapshot subscription fails
+        try {
+          const scansQ = query(
+            collection(db, "scans"),
+            where("userId", "==", uid),
+            where("status", "in", ["queued", "in_progress"]),
+            orderBy("createdAt", "desc"),
+            limit(50),
+          );
+          const snapGlobal = await getDocs(scansQ);
+          const globalItems: any[] = [];
+          snapGlobal.forEach((doc) => {
+            const data = doc.data();
+            globalItems.push({
+              scanId: doc.id,
+              type: data.type,
+              target: data.target,
+              status: data.status,
+              startTime: data.startTime || data.createdAt || null,
+              endTime: data.endTime || null,
+              resultsSummary: data.resultsSummary || null,
+              gcpStorageUrl: data.gcpStorageUrl || null,
+            });
+          });
+
+          setScans(globalItems);
+        } catch (fallbackErr) {
+          console.error(
+            "useUserScans: fallback global scans query failed",
+            fallbackErr,
+          );
+          setScans([]);
+        }
+
         setLoading(false);
       },
     );
