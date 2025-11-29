@@ -24,6 +24,9 @@ export async function POST(request: NextRequest) {
       resultsSummary,
       gcpStorageUrl,
       errorMessage,
+      // legacy/alternate keys some workers may send:
+      gcsPath,
+      summary,
     } = result;
 
     console.log(`📥 Webhook received for scan ${scanId}:`, status);
@@ -38,13 +41,19 @@ export async function POST(request: NextRequest) {
     try {
       const now = admin.firestore.Timestamp.now();
 
+      // Normalize fields and support alternate worker payloads (gcsPath, summary, 'done')
+      const normalizedStatus =
+        (status === "done" ? "completed" : status) || "completed";
+      const normalizedGcsUrl = gcpStorageUrl || gcsPath || null;
+      const normalizedSummary = resultsSummary || summary || null;
+
       // Merge the update into the user's scan doc (create if missing)
       await userScanRef.set(
         {
-          status,
+          status: normalizedStatus,
           endTime: now,
-          resultsSummary: resultsSummary || null,
-          gcpStorageUrl: gcpStorageUrl || null,
+          resultsSummary: normalizedSummary,
+          gcpStorageUrl: normalizedGcsUrl,
           errorMessage: errorMessage || null,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
@@ -54,9 +63,9 @@ export async function POST(request: NextRequest) {
       // Also update the global scan document for audit
       const globalScanRef = firestore.collection("scans").doc(scanId);
       await globalScanRef.update({
-        status,
-        resultsSummary: resultsSummary || null,
-        gcpStorageUrl: gcpStorageUrl || null,
+        status: normalizedStatus,
+        resultsSummary: normalizedSummary,
+        gcpStorageUrl: normalizedGcsUrl,
         errorMessage: errorMessage || null,
         endTime: now,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
