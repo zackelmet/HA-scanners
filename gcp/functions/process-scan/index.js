@@ -19,19 +19,51 @@ app.post("/process", async (req, res) => {
     const scanId = job.scanId || `scan-${Date.now()}`;
     const userId = job.userId || "unknown";
 
-    // TODO: Replace with real scanner invocation (nmap/openvas). This is a placeholder.
-    const results = {
-      scanId,
-      userId,
-      target: job.target,
-      type: job.type,
-      summary: "Placeholder result. Replace with scanner output in production.",
-      timestamp: Date.now(),
-    };
+    // Dynamic runner loader: try to load a runner module from ./runners/{type}.js
+    let runnerResult = null;
+    const scannerType = String(job.type || "unknown").toLowerCase();
+    try {
+      const runnerPath = `./runners/${scannerType}.js`;
+      // eslint-disable-next-line global-require, import/no-dynamic-require
+      const runner = require(runnerPath);
+      if (typeof runner.run === "function") {
+        runnerResult = await runner.run(job);
+      } else {
+        console.warn(`Runner ${runnerPath} does not export run()`);
+      }
+    } catch (err) {
+      console.warn(
+        `No specific runner for type '${scannerType}', using fallback.`,
+        err && err.message,
+      );
+    }
+
+    // Fallback simple result if no runner provided or runner failed
+    if (!runnerResult) {
+      runnerResult = {
+        status: "completed",
+        scanId,
+        userId,
+        resultsSummary: {
+          totalHosts: 1,
+          hostsUp: 1,
+          totalPorts: 0,
+          openPorts: 0,
+          vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0 },
+          scanDuration: 0,
+          summaryText: `placeholder scan for ${job.target}`,
+          findings: [],
+        },
+        rawOutput: null,
+        billingUnits: 1,
+        scannerType: scannerType,
+      };
+    }
 
     const destPath = `scan-results/${userId}/${scanId}.json`;
     const file = storage.bucket(BUCKET).file(destPath);
-    await file.save(JSON.stringify(results), {
+    // Persist the runnerResult (include metadata)
+    await file.save(JSON.stringify(runnerResult), {
       contentType: "application/json",
     });
 
@@ -55,24 +87,19 @@ app.post("/process", async (req, res) => {
     // Notify the SaaS webhook with metadata and log response for debugging
     if (WEBHOOK_URL) {
       try {
-        // Build structured resultsSummary so the SaaS can display Duration/Findings/Actions
         const gcsUrl = `gs://${BUCKET}/${destPath}`;
-        const resultsSummary = {
-          totalHosts: 1,
-          hostsUp: 1,
-          totalPorts: 0,
-          openPorts: 0,
-          vulnerabilities: {
-            critical: 0,
-            high: 0,
-            medium: 0,
-            low: 0,
-          },
-          // Placeholder duration (seconds) — replace with actual timing from real scanner
-          scanDuration: 0,
-          // Keep a human-readable summary as well
-          summaryText: results.summary || null,
-          findings: [],
+
+        const payload = {
+          scanId: runnerResult.scanId || scanId,
+          userId: runnerResult.userId || userId,
+          gcpStorageUrl: gcsUrl,
+          gcpSignedUrl: signedUrl,
+          gcpSignedUrlExpires: signedUrlExpires,
+          resultsSummary: runnerResult.resultsSummary,
+          status: runnerResult.status || "completed",
+          // include scanner metadata for the SaaS to persist and bill
+          scannerType: runnerResult.scannerType || scannerType,
+          billingUnits: runnerResult.billingUnits || 1,
         };
 
         const resp = await fetch(WEBHOOK_URL, {
@@ -81,17 +108,7 @@ app.post("/process", async (req, res) => {
             "Content-Type": "application/json",
             "x-gcp-webhook-secret": WEBHOOK_SECRET || "",
           },
-          body: JSON.stringify({
-            scanId,
-            userId,
-            // Use the canonical keys the SaaS expects
-            gcpStorageUrl: gcsUrl,
-            // Include a short-lived signed URL and its expiry when available
-            gcpSignedUrl: signedUrl,
-            gcpSignedUrlExpires: signedUrlExpires,
-            resultsSummary,
-            status: "completed",
-          }),
+          body: JSON.stringify(payload),
         });
 
         console.log("webhook POST completed", {
@@ -109,7 +126,9 @@ app.post("/process", async (req, res) => {
       }
     }
 
-    res.status(200).json({ success: true, scanId });
+    res
+      .status(200)
+      .json({ success: true, scanId: runnerResult.scanId || scanId });
   } catch (err) {
     console.error("scanProcessor error", err);
     res.status(500).json({ error: String(err) });

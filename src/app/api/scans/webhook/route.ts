@@ -29,6 +29,9 @@ export async function POST(request: NextRequest) {
       gcpSignedUrl,
       gcpSignedUrlExpires,
       errorMessage,
+      // optional scanner metadata
+      scannerType,
+      billingUnits,
       // legacy/alternate keys some workers may send:
       gcsPath,
       summary,
@@ -65,6 +68,9 @@ export async function POST(request: NextRequest) {
           gcpSignedUrl: normalizedSignedUrl,
           gcpSignedUrlExpires: normalizedSignedUrlExpires,
           errorMessage: errorMessage || null,
+          // scanner metadata for usage/billing
+          scannerType: scannerType || null,
+          billingUnits: typeof billingUnits === "number" ? billingUnits : null,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
         { merge: true },
@@ -80,9 +86,32 @@ export async function POST(request: NextRequest) {
         gcpSignedUrl: normalizedSignedUrl,
         gcpSignedUrlExpires: normalizedSignedUrlExpires,
         errorMessage: errorMessage || null,
+        scannerType: scannerType || null,
+        billingUnits: typeof billingUnits === "number" ? billingUnits : null,
         endTime: now,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+
+      // Increment per-user usage counters for this scannerType (transactional)
+      if (scannerType) {
+        const usageRef = firestore.collection("usage").doc(userId);
+        const incrementBy = typeof billingUnits === "number" ? billingUnits : 1;
+        try {
+          await firestore.runTransaction(async (tx) => {
+            const snap = await tx.get(usageRef);
+            if (!snap.exists) {
+              tx.set(usageRef, { scanners: { [scannerType]: incrementBy } });
+            } else {
+              tx.update(usageRef, {
+                [`scanners.${scannerType}`]:
+                  admin.firestore.FieldValue.increment(incrementBy),
+              });
+            }
+          });
+        } catch (e) {
+          console.warn("Failed to increment usage counter:", e);
+        }
+      }
 
       console.log(`✅ Updated scan ${scanId} status to ${status}`);
     } catch (err: any) {
