@@ -70,6 +70,24 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
 
   // Disallow control characters, very large ports, and overly long URLs
   if (/[\x00-\x1F\x7F]/.test(functionUrl)) {
+    // Log a visible representation so we can see hidden/control characters in Vercel logs
+    try {
+      const visible = JSON.stringify(functionUrl);
+      const codes = Array.from(functionUrl).map((ch) => ({
+        ch,
+        code: ch.charCodeAt(0),
+        hex: ch.charCodeAt(0).toString(16),
+      }));
+      console.error(
+        "Cloud Tasks target URL contains control characters:",
+        visible,
+      );
+      console.error("Character codes:", JSON.stringify(codes));
+    } catch (e) {
+      console.error(
+        "Cloud Tasks target URL contains control characters (failed to serialize)",
+      );
+    }
     throw new Error("Cloud Tasks target URL contains control characters");
   }
   if (parsedUrl.port) {
