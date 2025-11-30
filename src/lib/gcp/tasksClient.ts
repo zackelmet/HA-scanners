@@ -43,10 +43,47 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
     process.env.GCP_CLOUD_RUN_URL ||
     `${location}-${projectId}.cloudfunctions.net/scanProcessor`;
 
+  // Trim and remove accidental surrounding quotes
+  functionUrl = String(functionUrl || "")
+    .trim()
+    .replace(/^\"|\"$/g, "");
+
   // Ensure the function URL includes a scheme. Cloud Tasks requires
   // an https:// URL when using an authorization header / OIDC token.
   if (!/^https?:\/\//i.test(functionUrl)) {
     functionUrl = `https://${functionUrl}`;
+  }
+
+  // Validate the final URL and provide a clearer error message earlier
+  let parsedUrl: URL | null = null;
+  try {
+    parsedUrl = new URL(functionUrl);
+  } catch (err) {
+    console.error(
+      "Invalid Cloud Run/Function URL for Cloud Tasks:",
+      functionUrl,
+    );
+    throw new Error(
+      `Invalid Cloud Run/Function URL for Cloud Tasks: ${functionUrl}. Ensure the env var GCP_CLOUD_RUN_URL or GCP_FUNCTION_URL is a valid https:// URL.`,
+    );
+  }
+
+  // Disallow control characters, very large ports, and overly long URLs
+  if (/[\x00-\x1F\x7F]/.test(functionUrl)) {
+    throw new Error("Cloud Tasks target URL contains control characters");
+  }
+  if (parsedUrl.port) {
+    const portNum = Number(parsedUrl.port);
+    if (!Number.isFinite(portNum) || portNum <= 0 || portNum > 65535) {
+      throw new Error(
+        `Cloud Tasks target URL has invalid port: ${parsedUrl.port}`,
+      );
+    }
+  }
+  if (functionUrl.length > 2083) {
+    throw new Error(
+      "Cloud Tasks target URL exceeds maximum supported length (2083)",
+    );
   }
 
   // Parse service account key from env (expected base64-encoded JSON)
