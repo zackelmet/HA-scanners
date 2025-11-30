@@ -506,7 +506,21 @@ export default function DashboardPage() {
                               })()}
                             </td>
                             <td>
-                              {scan.gcpStorageUrl ? (
+                              {scan.gcpSignedUrl ? (
+                                <div className="flex flex-col">
+                                  <a
+                                    href={scan.gcpSignedUrl}
+                                    target="_blank"
+                                    rel="noreferrer noopener"
+                                    className="link"
+                                  >
+                                    View
+                                  </a>
+                                  <span className="text-xs opacity-70">
+                                    Link valid for 7 days
+                                  </span>
+                                </div>
+                              ) : scan.gcpStorageUrl ? (
                                 <a
                                   href={scan.gcpStorageUrl}
                                   target="_blank"

@@ -35,6 +35,23 @@ app.post("/process", async (req, res) => {
       contentType: "application/json",
     });
 
+    // Create a signed URL valid for 7 days so the dashboard can link directly
+    // to the results file without making the bucket public.
+    let signedUrl = null;
+    let signedUrlExpires = null;
+    try {
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      const expiresAt = new Date(Date.now() + sevenDaysMs);
+      const [url] = await storage
+        .bucket(BUCKET)
+        .file(destPath)
+        .getSignedUrl({ action: "read", expires: expiresAt });
+      signedUrl = url;
+      signedUrlExpires = expiresAt.toISOString();
+    } catch (err) {
+      console.warn("Failed to create signed URL for scan result:", err);
+    }
+
     // Notify the SaaS webhook with metadata and log response for debugging
     if (WEBHOOK_URL) {
       try {
@@ -69,6 +86,9 @@ app.post("/process", async (req, res) => {
             userId,
             // Use the canonical keys the SaaS expects
             gcpStorageUrl: gcsUrl,
+            // Include a short-lived signed URL and its expiry when available
+            gcpSignedUrl: signedUrl,
+            gcpSignedUrlExpires: signedUrlExpires,
             resultsSummary,
             status: "completed",
           }),

@@ -25,6 +25,9 @@ export async function POST(request: NextRequest) {
       status,
       resultsSummary,
       gcpStorageUrl,
+      // optional signed URL and expiry sent by worker
+      gcpSignedUrl,
+      gcpSignedUrlExpires,
       errorMessage,
       // legacy/alternate keys some workers may send:
       gcsPath,
@@ -48,6 +51,8 @@ export async function POST(request: NextRequest) {
         (status === "done" ? "completed" : status) || "completed";
       const normalizedGcsUrl = gcpStorageUrl || gcsPath || null;
       const normalizedSummary = resultsSummary || summary || null;
+      const normalizedSignedUrl = gcpSignedUrl || null;
+      const normalizedSignedUrlExpires = gcpSignedUrlExpires || null;
 
       // Merge the update into the user's scan doc (create if missing)
       await userScanRef.set(
@@ -56,6 +61,9 @@ export async function POST(request: NextRequest) {
           endTime: now,
           resultsSummary: normalizedSummary,
           gcpStorageUrl: normalizedGcsUrl,
+          // store worker-provided signed url and its expiry if present
+          gcpSignedUrl: normalizedSignedUrl,
+          gcpSignedUrlExpires: normalizedSignedUrlExpires,
           errorMessage: errorMessage || null,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
@@ -68,6 +76,9 @@ export async function POST(request: NextRequest) {
         status: normalizedStatus,
         resultsSummary: normalizedSummary,
         gcpStorageUrl: normalizedGcsUrl,
+        // store signed url on global doc too for convenience (may expire)
+        gcpSignedUrl: normalizedSignedUrl,
+        gcpSignedUrlExpires: normalizedSignedUrlExpires,
         errorMessage: errorMessage || null,
         endTime: now,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
