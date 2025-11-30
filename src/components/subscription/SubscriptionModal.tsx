@@ -33,7 +33,7 @@ export default function SubscriptionModal({
         setShowPricing("false");
       }
     }
-  }, [showPricing]);
+  }, [showPricing, setShowSubscriptionModal]);
 
   useEffect(() => {
     if (showSubscriptionModal && modalRef.current) {
