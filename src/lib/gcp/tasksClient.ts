@@ -141,6 +141,13 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
 
   const createUrl = `https://cloudtasks.googleapis.com/v2/projects/${projectId}/locations/${location}/queues/${queueName}/tasks`;
 
+  // Debug: surface the exact URL being sent to Cloud Tasks in server logs
+  try {
+    console.info("Cloud Tasks target URL:", functionUrl);
+  } catch (err) {
+    // swallow logging errors to avoid breaking enqueue path
+  }
+
   const taskBody = {
     task: {
       httpRequest: {
