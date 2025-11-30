@@ -38,10 +38,16 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
   }
 
   // Cloud Function / Cloud Run URL for the worker
-  const functionUrl =
+  let functionUrl =
     process.env.GCP_FUNCTION_URL ||
     process.env.GCP_CLOUD_RUN_URL ||
-    `https://${location}-${projectId}.cloudfunctions.net/scanProcessor`;
+    `${location}-${projectId}.cloudfunctions.net/scanProcessor`;
+
+  // Ensure the function URL includes a scheme. Cloud Tasks requires
+  // an https:// URL when using an authorization header / OIDC token.
+  if (!/^https?:\/\//i.test(functionUrl)) {
+    functionUrl = `https://${functionUrl}`;
+  }
 
   // Parse service account key from env (expected base64-encoded JSON)
   const key = parseServiceAccountKey(process.env.GCP_SERVICE_ACCOUNT_KEY);
