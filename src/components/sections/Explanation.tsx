@@ -36,9 +36,7 @@ export default function ExplanationSection() {
         <div className="collapse-title text-xl font-medium">Why Mixpanel?</div>
         <div className="collapse-content">
           <p>
-            {`Mixpanel is a great application for tracking user behavior and user
-            click events. The free plan is pretty generous too and I've been
-            using it for years.`}
+            {`Analytics help you understand user behavior and engagement across your app. You can enable a provider in production by adding its token to your environment variables and initializing the client in the browser.`}
           </p>
         </div>
       </div>

@@ -14,7 +14,15 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Section from "../shared/Section";
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+const showToast = (type: "error" | "success", message: string) => {
+  import("react-hot-toast")
+    .then((mod) => {
+      const { toast } = mod as any;
+      if (type === "error") toast.error(message);
+      else toast.success(message);
+    })
+    .catch(() => {});
+};
 import useSWR from "swr";
 
 interface DashboardData {
@@ -31,7 +39,7 @@ export default function AdminDashboard() {
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
-    null
+    null,
   );
   const [amount, setAmount] = useState<number | "">("");
   const [dueDate, setDueDate] = useState("");
@@ -53,15 +61,15 @@ export default function AdminDashboard() {
     mutate: mutateCustomers,
   } = useSWR<{ customers: Array<{ id: string; email: string }> }>(
     "/api/stripe/customers",
-    fetcher
+    fetcher,
   );
 
   if (dashboardError) {
-    toast.error("Failed to fetch dashboard data");
+    showToast("error", "Failed to fetch dashboard data");
   }
 
   if (customersError) {
-    toast.error("Failed to fetch customers");
+    showToast("error", "Failed to fetch customers");
   }
 
   const formatNumber = (num: number) => {
@@ -74,15 +82,15 @@ export default function AdminDashboard() {
 
   const generateInvoice = async () => {
     if (!selectedCustomerId) {
-      toast.error("Please select a customer");
+      showToast("error", "Please select a customer");
       return;
     }
     if (!amount || amount <= 0) {
-      toast.error("Please enter a valid amount");
+      showToast("error", "Please enter a valid amount");
       return;
     }
     if (!dueDate) {
-      toast.error("Please select a due date");
+      showToast("error", "Please select a due date");
       return;
     }
 
@@ -109,7 +117,7 @@ export default function AdminDashboard() {
       setDueDate("");
     } catch (error) {
       console.error("Error generating invoice:", error);
-      toast.error("Failed to generate invoice. Please try again.");
+      showToast("error", "Failed to generate invoice. Please try again.");
     } finally {
       setIsGeneratingInvoice(false);
     }
@@ -121,7 +129,7 @@ export default function AdminDashboard() {
 
   const addCustomer = async () => {
     if (!newCustomerEmail) {
-      toast.error("Please enter a valid email");
+      showToast("error", "Please enter a valid email");
       return;
     }
 
@@ -138,13 +146,13 @@ export default function AdminDashboard() {
         throw new Error("Failed to add customer");
       }
       const { customerId } = await response.json();
-      toast.success("Customer added successfully");
+      showToast("success", "Customer added successfully");
       setIsAddCustomerModalOpen(false);
       setNewCustomerEmail("");
       mutateCustomers();
     } catch (error) {
       console.error("Error adding customer:", error);
-      toast.error("Failed to add customer. Please try again.");
+      showToast("error", "Failed to add customer. Please try again.");
     } finally {
       setIsAddingCustomer(false);
     }

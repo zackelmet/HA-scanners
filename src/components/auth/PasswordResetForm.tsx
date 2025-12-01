@@ -4,7 +4,16 @@ import { auth } from "@/lib/firebase/firebaseClient";
 import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import toast from "react-hot-toast";
+
+const showToast = (type: "error" | "success", message: string) => {
+  import("react-hot-toast")
+    .then((mod) => {
+      const t = mod as any;
+      if (type === "error") t.toast.error(message);
+      else t.toast.success(message);
+    })
+    .catch(() => {});
+};
 
 export default function PasswordResetForm() {
   const [newPassword, setNewPassword] = useState("");
@@ -14,7 +23,7 @@ export default function PasswordResetForm() {
 
   const handlePasswordReset = async () => {
     if (!oobCode) {
-      toast.error("Error resetting password: invalid code.");
+      showToast("error", "Error resetting password: invalid code.");
       return;
     }
 
@@ -23,10 +32,10 @@ export default function PasswordResetForm() {
       await verifyPasswordResetCode(auth, oobCode as string);
       // If valid, update the password
       await confirmPasswordReset(auth, oobCode as string, newPassword);
-      toast.success("Password has been reset successfully!");
+      showToast("success", "Password has been reset successfully!");
       router.push("/"); // Redirect to login page
     } catch (error) {
-      toast.error("Failed to reset password. Please try again.");
+      showToast("error", "Failed to reset password. Please try again.");
     }
   };
 

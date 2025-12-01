@@ -1,7 +1,6 @@
 "use client";
 
-import mixpanel from "mixpanel-browser";
-import { Toaster } from "react-hot-toast";
+import { useEffect, useState } from "react";
 import { AuthProvider } from "./AuthContext";
 import { SubscriptionModalProvider } from "./SubscriptionModalContext";
 import { AuthService } from "../auth/AuthService";
@@ -9,16 +8,24 @@ import { AuthService } from "../auth/AuthService";
 const authService = new AuthService();
 
 export default function ClientProviders({ children }: any) {
-  mixpanel.init(process.env.NEXT_PUBLIC_MIXPANEL_TOKEN as string, {
-    debug: process.env.NODE_ENV !== "production",
-    track_pageview: true,
-    persistence: "localStorage",
-  });
+  const [ToasterComp, setToasterComp] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const mod = await import("react-hot-toast");
+        setToasterComp(() => mod.Toaster);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("react-hot-toast failed to load in ClientProviders:", err);
+      }
+    })();
+  }, []);
 
   return (
     <AuthProvider authService={authService}>
       <SubscriptionModalProvider>
-        <Toaster />
+        {ToasterComp ? <ToasterComp /> : null}
         {children}
       </SubscriptionModalProvider>
     </AuthProvider>

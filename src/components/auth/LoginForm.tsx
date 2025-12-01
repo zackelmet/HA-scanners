@@ -3,12 +3,8 @@
 import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
-import toast from "react-hot-toast";
-import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "@/lib/firebase/firebaseClient";
+// Lazy-load react-hot-toast and Firebase auth at runtime to avoid DOM access during server prerender
 import { useRouter } from "next/navigation";
-import { signIn, SignInMethod } from "@/lib/firebase/signin";
-import signUp from "@/lib/firebase/signup";
 
 enum FormMode {
   Login,
@@ -25,10 +21,12 @@ export default function AuthForm() {
 
   const handleGoogleAuth = async () => {
     try {
+      const signInModule = await import("@/lib/firebase/signin");
+      const { signIn, SignInMethod } = signInModule as any;
       const { user, error } = await signIn(SignInMethod.Google, {
-        signupCallback: async (userCredential) => {
+        signupCallback: async (userCredential: any) => {
           // When a new user signs up, call the signup endpoint
-          const response = await fetch("/api/users/signup", {
+          await fetch("/api/users/signup", {
             method: "POST",
             body: JSON.stringify({
               uid: userCredential.user.uid,
@@ -41,24 +39,28 @@ export default function AuthForm() {
       if (user) {
         router.push("/app/dashboard");
       } else if (error) {
+        const { toast } = await import("react-hot-toast");
         toast.error(error);
       }
-    } catch (error) {
-      console.error("Google sign-in error:", error);
+    } catch (err) {
+      console.error("Google sign-in error:", err);
+      const { toast } = await import("react-hot-toast");
       toast.error("An unexpected error occurred during Google sign-in");
     }
   };
 
   const handleLogin = async () => {
     try {
+      const signInModule = await import("@/lib/firebase/signin");
+      const { signIn, SignInMethod } = signInModule as any;
       const { user, error } = await signIn(SignInMethod.EmailPassword, {
         credentials: {
           email,
           password,
         },
-        signupCallback: async (userCredential) => {
+        signupCallback: async (userCredential: any) => {
           // When a new user signs up, call the signup endpoint
-          const response = await fetch("/api/users/signup", {
+          await fetch("/api/users/signup", {
             method: "POST",
             body: JSON.stringify({
               uid: userCredential.user.uid,
@@ -71,10 +73,12 @@ export default function AuthForm() {
       if (user) {
         router.push("/app/dashboard");
       } else if (error) {
+        const { toast } = await import("react-hot-toast");
         toast.error(error);
       }
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch (err) {
+      console.error("Login error:", err);
+      const { toast } = await import("react-hot-toast");
       toast.error("An unexpected error occurred during login");
     }
   };
@@ -86,14 +90,16 @@ export default function AuthForm() {
     }
 
     try {
+      const signUpModule = await import("@/lib/firebase/signup");
+      const signUp = signUpModule.default as any;
       const { user, error } = await signUp(email, password);
       if (user) {
         router.push("/app/dashboard");
       } else if (error) {
         setError(error.message);
       }
-    } catch (error) {
-      console.error("Registration error:", error);
+    } catch (err) {
+      console.error("Registration error:", err);
       setError("An unexpected error occurred during registration");
     }
   };
@@ -101,15 +107,21 @@ export default function AuthForm() {
   const handleForgotPassword = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!email) {
+      const { toast } = await import("react-hot-toast");
       toast.error("Please enter your email address.");
       return;
     }
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      const authModule = await import("@/lib/firebase/firebaseClient");
+      const firebaseAuth = (authModule as any).auth;
+      const { sendPasswordResetEmail } = await import("firebase/auth");
+      await sendPasswordResetEmail(firebaseAuth, email);
+      const { toast } = await import("react-hot-toast");
       toast.success("Password reset email sent.");
-    } catch (error: any) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
+      const { toast } = await import("react-hot-toast");
       toast.error("An error occurred. Please try again.");
     }
   };
@@ -204,7 +216,7 @@ export default function AuthForm() {
                 setFormMode(
                   formMode === FormMode.Login
                     ? FormMode.Register
-                    : FormMode.Login
+                    : FormMode.Login,
                 )
               }
             >

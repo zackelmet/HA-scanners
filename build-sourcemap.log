@@ -1,0 +1,255 @@
+
+> fire-saas-public@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.15
+  - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+
+🌼   daisyUI 4.6.1
+├─ ✔︎ 1 theme added		https://daisyui.com/docs/themes
+╰─ ★ Star daisyUI on GitHub	https://github.com/saadeghi/daisyui
+
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+Firebase Admin initialized using explicit service account
+Firebase Admin initialized using explicit service account
+Firebase Admin initialized using explicit service account
+Firebase Admin initialized using explicit service account
+Firebase Admin initialized using explicit service account
+Firebase Admin initialized using explicit service account
+Firebase Admin initialized using explicit service account
+   Generating static pages (0/28) ...
+   Generating static pages (7/28) 
+Firebase Admin initialized using explicit service account
+   Generating static pages (14/28) 
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171) {
+  digest: '3072715197'
+}
+
+Error occurred prerendering page "/_not-found". Read more: https://nextjs.org/docs/messages/prerender-error
+
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171)
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171) {
+  digest: '3072715197'
+}
+
+Error occurred prerendering page "/app/dashboard". Read more: https://nextjs.org/docs/messages/prerender-error
+
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171)
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171) {
+  digest: '3072715197'
+}
+
+Error occurred prerendering page "/admin". Read more: https://nextjs.org/docs/messages/prerender-error
+
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171)
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171) {
+  digest: '3072715197'
+}
+
+Error occurred prerendering page "/blog". Read more: https://nextjs.org/docs/messages/prerender-error
+
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171)
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171) {
+  digest: '3072715197'
+}
+   Generating static pages (21/28) 
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171) {
+  digest: '3072715197'
+}
+
+Error occurred prerendering page "/login". Read more: https://nextjs.org/docs/messages/prerender-error
+
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171)
+
+Error occurred prerendering page "/password-reset". Read more: https://nextjs.org/docs/messages/prerender-error
+
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171)
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171) {
+  digest: '3072715197'
+}
+
+Error occurred prerendering page "/". Read more: https://nextjs.org/docs/messages/prerender-error
+
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171)
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171) {
+  digest: '3072715197'
+}
+
+Error occurred prerendering page "/blog/test". Read more: https://nextjs.org/docs/messages/prerender-error
+
+TypeError: Cannot read properties of null (reading 'container')
+    at V (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:91290)
+    at tL (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/478.js:37:169516)
+    at 6755 (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/chunks/176.js:1:591)
+    at Object.t [as require] (/home/zack/Desktop/WebDev/Hacker Analytics/SaaS/.next/server/webpack-runtime.js:1:128)
+    at __next_require__ (webpack://next/dist/esm/server/client-component-renderer-logger.js:17:50)
+    at M (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:28:46)
+    at a (webpack://next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.min.js:25:89)
+    at If (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:132:222)
+    at Z (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:177:243)
+    at nB (webpack://next/dist/compiled/react-dom/cjs/react-dom-server.edge.production.min.js:188:171)
+ ✓ Generating static pages (28/28)
+
+> Export encountered errors on following paths:
+	/_not-found/page: /_not-found
+	/admin/page: /admin
+	/app/dashboard/page: /app/dashboard
+	/blog/[slug]/page: /blog/test
+	/blog/page: /blog
+	/login/page: /login
+	/page: /
+	/password-reset/page: /password-reset

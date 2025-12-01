@@ -1,4 +1,3 @@
-import toast from "react-hot-toast";
 import getStripe from "./getStripe";
 
 /**
@@ -22,7 +21,7 @@ import getStripe from "./getStripe";
  * @returns {Promise<void>}
  */
 export default async function createOneTimeCheckout(
-  priceId: string
+  priceId: string,
 ): Promise<void> {
   try {
     const stripe = await getStripe();
@@ -47,8 +46,13 @@ export default async function createOneTimeCheckout(
     }
   } catch (error) {
     console.error("Checkout error:", error);
-    toast.error(
-      error instanceof Error ? error.message : "An unknown error occurred"
-    );
+    import("react-hot-toast")
+      .then((mod) => {
+        const { toast } = mod as any;
+        toast.error(
+          error instanceof Error ? error.message : "An unknown error occurred",
+        );
+      })
+      .catch(() => {});
   }
 }
