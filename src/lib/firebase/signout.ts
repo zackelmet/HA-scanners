@@ -1,8 +1,14 @@
-import { Auth, signOut } from "firebase/auth";
+import { Auth, signOut, getAuth } from "firebase/auth";
 import firebase_app from "./firebaseClient";
-import { getAuth } from "firebase/auth";
 
-const defaultAuth = getAuth(firebase_app);
+function getDefaultAuth(): Auth | undefined {
+  try {
+    if (typeof window === "undefined") return undefined;
+    return getAuth(firebase_app as any);
+  } catch (err) {
+    return undefined;
+  }
+}
 
 /**
  * Interface for the sign-out result
@@ -45,14 +51,23 @@ interface SignOutResult {
  */
 export default async function signout(
   cleanup: () => Promise<void> = () => Promise.resolve(),
-  auth: Auth = defaultAuth
+  auth?: Auth,
 ): Promise<SignOutResult> {
   try {
-    await signOut(auth);
+    const authToUse = auth || getDefaultAuth();
+    if (authToUse) {
+      await signOut(authToUse);
+    }
 
-    // Perform any additional cleanup here
-    localStorage.clear();
-    sessionStorage.clear();
+    // Perform any additional cleanup here (only in browser)
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (e) {
+        // ignore
+      }
+    }
 
     // Execute the cleanup callback
     await cleanup();

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-// Temporarily avoid rendering client-heavy providers and navbar during build
-// to isolate prerender-time DOM access issues. Will revert after diagnosis.
-// import ClientProviders from "@/lib/context/ClientProviders";
-// import Navbar from "@/components/nav/Navbar";
+// ClientProviders and Navbar were temporarily disabled during prerender
+// diagnostics; restore them now.
+import ClientProviders from "@/lib/context/ClientProviders";
+import Navbar from "@/components/nav/Navbar";
 import Footer from "@/components/nav/Footer";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
@@ -41,8 +41,10 @@ export default function RootLayout({
     <html lang="en">
       {/* Change your theme HERE */}
       <body className={inter.className} data-theme="cupcake">
-        {/* ClientProviders + Navbar temporarily disabled for prerender diagnostics */}
-        {children}
+        <ClientProviders>
+          <Navbar />
+          {children}
+        </ClientProviders>
         <Footer />
       </body>
     </html>
