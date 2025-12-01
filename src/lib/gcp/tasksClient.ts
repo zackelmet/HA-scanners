@@ -86,6 +86,23 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
     );
   }
 
+  // Defensive: if the provided URL is the service root (no path), target the
+  // worker's `/process` route which the Cloud Run service exposes.
+  // This prevents Cloud Tasks from POSTing to `/` where Express may not handle the job.
+  try {
+    if (!parsedUrl) parsedUrl = new URL(functionUrl);
+    if (parsedUrl.pathname === "/" || parsedUrl.pathname === "") {
+      functionUrl = functionUrl.replace(/\/$/, "") + "/process";
+      parsedUrl = new URL(functionUrl);
+      console.info(
+        "Adjusted Cloud Tasks target URL to include /process:",
+        functionUrl,
+      );
+    }
+  } catch (err) {
+    // If defensive adjustment fails, we'll continue and rely on earlier validation
+  }
+
   // Parse service account key from env (expected base64-encoded JSON)
   const key = parseServiceAccountKey(process.env.GCP_SERVICE_ACCOUNT_KEY);
   if (!key) {
