@@ -127,103 +127,151 @@ export default function AuthForm() {
   };
 
   return (
-    <div className="flex flex-col w-full items-center justify-start pt-20 h-screen">
-      <div className="card w-full max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl bg-base-300 shadow-xl">
-        <div className="card-body">
-          <h2 className="card-title">
-            {formMode === FormMode.Login ? "Login" : "Register"}
-          </h2>
-          {error && <div className="text-error">{error}</div>}
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Email</span>
-            </label>
-            <input
-              type="email"
-              placeholder="Email"
-              className="input input-bordered"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Password</span>
-            </label>
-            <input
-              type="password"
-              placeholder="Password"
-              className="input input-bordered"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          {formMode === FormMode.Register && (
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Confirm Password</span>
-              </label>
-              <input
-                type="password"
-                placeholder="Confirm Password"
-                className="input input-bordered"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
+    <div className="relative min-h-screen bg-[var(--bg)] text-[--text] overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none opacity-60">
+        <div className="absolute inset-6 neon-grid" />
+      </div>
+
+      <div className="relative w-full max-w-6xl mx-auto px-6 lg:px-12 py-12 lg:py-16">
+        <div className="flex flex-col lg:flex-row gap-10 items-center">
+          <div className="flex-1 space-y-4 text-center lg:text-left">
+            <div className="inline-flex items-center gap-3 neon-badge-muted px-3 py-2 rounded-xl">
+              Secure access
             </div>
-          )}
-          {formMode === FormMode.Login && (
-            <label className="label">
-              <a
-                href="#"
-                onClick={handleForgotPassword}
-                className="label-text-alt link link-hover"
-              >
-                Forgot password?
-              </a>
-            </label>
-          )}
-          <div className="form-control mt-6">
-            {formMode === FormMode.Login ? (
-              <button
-                disabled={!email || !password || error !== null}
-                onClick={handleLogin}
-                className="btn btn-primary"
-              >
-                Login
-              </button>
-            ) : (
-              <button
-                disabled={!email || !password || !confirmPassword}
-                onClick={handleRegister}
-                className="btn btn-primary"
-              >
-                Register
-              </button>
-            )}
+            <h1 className="text-3xl lg:text-5xl font-black leading-tight">
+              Start Scanning in 5 Minutes.
+            </h1>
+            <p className="text-base lg:text-lg neon-subtle max-w-xl">
+              Join 3,500+ security teams who focus on fixing, not maintaining.
+              No credit card required to begin.
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center lg:justify-start text-sm text-[var(--text-muted)]">
+              <span className="neon-chip">Hosted Nmap</span>
+              <span className="neon-chip">OpenVAS findings</span>
+              <span className="neon-chip">SOC2-ready controls</span>
+            </div>
           </div>
-          <div className="divider">OR</div>
-          <div className="form-control">
-            <button className="btn btn-outline" onClick={handleGoogleAuth}>
-              <FontAwesomeIcon icon={faGoogle} className="text-lg mr-2" /> Sign
-              in with Google
-            </button>
-          </div>
-          <div className="form-control mt-2">
-            <button
-              className="btn btn-outline btn-neutral"
-              onClick={() =>
-                setFormMode(
-                  formMode === FormMode.Login
-                    ? FormMode.Register
-                    : FormMode.Login,
-                )
-              }
-            >
-              {formMode === FormMode.Login
-                ? "Need an account? Register"
-                : "Have an account? Login"}
-            </button>
+
+          <div className="flex-1 w-full max-w-xl">
+            <div className="neon-card p-6 lg:p-7 space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)] mb-1">
+                    {formMode === FormMode.Login
+                      ? "Welcome back"
+                      : "Create account"}
+                  </p>
+                  <h2 className="text-2xl font-bold">
+                    {formMode === FormMode.Login ? "Sign in" : "Sign up"}
+                  </h2>
+                </div>
+                <button
+                  className="text-sm neon-outline-btn px-3 py-2"
+                  onClick={() =>
+                    setFormMode(
+                      formMode === FormMode.Login
+                        ? FormMode.Register
+                        : FormMode.Login,
+                    )
+                  }
+                >
+                  {formMode === FormMode.Login
+                    ? "New here?"
+                    : "Have an account?"}
+                </button>
+              </div>
+
+              {error && (
+                <div className="text-[var(--danger)] text-sm">{error}</div>
+              )}
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[var(--text)]">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="you@company.com"
+                    className="neon-input w-full py-3"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[var(--text)]">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Enter password"
+                    className="neon-input w-full py-3"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+
+                {formMode === FormMode.Register && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-[var(--text)]">
+                      Confirm Password
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Repeat password"
+                      className="neon-input w-full py-3"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {formMode === FormMode.Login && (
+                  <div className="flex justify-end">
+                    <button
+                      className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] underline"
+                      onClick={handleForgotPassword}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                {formMode === FormMode.Login ? (
+                  <button
+                    disabled={!email || !password || error !== null}
+                    onClick={handleLogin}
+                    className="neon-primary-btn w-full py-3 font-semibold disabled:opacity-60"
+                  >
+                    Sign in
+                  </button>
+                ) : (
+                  <button
+                    disabled={!email || !password || !confirmPassword}
+                    onClick={handleRegister}
+                    className="neon-primary-btn w-full py-3 font-semibold disabled:opacity-60"
+                  >
+                    Create account
+                  </button>
+                )}
+
+                <button
+                  className="neon-outline-btn w-full py-3 font-semibold flex items-center justify-center gap-2"
+                  onClick={handleGoogleAuth}
+                >
+                  <FontAwesomeIcon icon={faGoogle} className="text-lg" />{" "}
+                  Continue with Google
+                </button>
+              </div>
+
+              <div className="text-xs neon-subtle text-center">
+                SSO coming soon. By continuing you agree to our Terms and
+                Privacy.
+              </div>
+            </div>
           </div>
         </div>
       </div>

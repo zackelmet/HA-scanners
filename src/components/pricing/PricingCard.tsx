@@ -9,6 +9,7 @@ interface PricingCardProps {
   priceId: string;
   features: string[];
   popular?: boolean;
+  label?: string;
 }
 
 export default function PricingCard({
@@ -17,9 +18,12 @@ export default function PricingCard({
   priceId,
   features,
   popular = false,
+  label,
 }: PricingCardProps) {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
+
+  const displayLabel = label || (popular ? "Best for teams" : undefined);
 
   const handleCheckout = async () => {
     if (!currentUser) {
@@ -66,48 +70,52 @@ export default function PricingCard({
 
   return (
     <div
-      className={`card bg-base-200 shadow-xl ${popular ? "border-2 border-primary" : ""}`}
+      className={`relative neon-card p-6 flex flex-col gap-4 transition-transform duration-150 hover:-translate-y-1 ${popular ? "ring-2 ring-[var(--primary)]" : ""}`}
     >
       {popular && (
-        <div className="badge badge-primary absolute right-4 top-4">
-          Popular
-        </div>
+        <div className="neon-chip absolute left-4 top-4">Popular</div>
       )}
-      <div className="card-body">
-        <h2 className="card-title text-2xl">{name}</h2>
-        <div className="my-4">
-          <span className="text-4xl font-bold">{price}</span>
-          <span className="text-base-content/60">/month</span>
+
+      <div
+        className={`flex items-start justify-between gap-3 ${popular ? "mt-6" : ""}`}
+      >
+        <div>
+          {displayLabel && (
+            <p className="uppercase text-xs tracking-[0.08em] text-[var(--text-muted)]">
+              {displayLabel}
+            </p>
+          )}
+          <h2 className="text-2xl font-bold text-[var(--text)]">{name}</h2>
         </div>
-        <ul className="space-y-2 mb-6">
-          {features.map((feature, idx) => (
-            <li key={idx} className="flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-success"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              {feature}
-            </li>
-          ))}
-        </ul>
-        <div className="card-actions">
-          <button
-            onClick={handleCheckout}
-            disabled={loading}
-            className={`btn btn-primary w-full ${loading ? "loading" : ""}`}
-          >
-            {loading ? "Loading..." : "Get Started"}
-          </button>
+        <div className="text-right">
+          <div className="text-4xl font-black text-[var(--primary)]">
+            {price}
+          </div>
+          <div className="text-sm text-[var(--text-muted)]">per month</div>
         </div>
+      </div>
+
+      <div className="neon-divider" />
+
+      <ul className="space-y-3 text-sm">
+        {features.map((feature, idx) => (
+          <li key={idx} className="flex items-center gap-3 text-[var(--text)]">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[rgba(0,254,217,0.12)] border border-[rgba(0,254,217,0.35)] text-[var(--primary)] text-xs">
+              ✓
+            </span>
+            <span className="text-[var(--text-muted)]">{feature}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-auto pt-2">
+        <button
+          onClick={handleCheckout}
+          disabled={loading}
+          className={`w-full py-3 font-semibold ${loading ? "opacity-70 cursor-not-allowed" : ""} ${popular ? "neon-primary-btn" : "neon-outline-btn"}`}
+        >
+          {loading ? "Loading..." : "Get Started"}
+        </button>
       </div>
     </div>
   );

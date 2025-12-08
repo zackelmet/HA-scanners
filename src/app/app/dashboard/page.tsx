@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faNetworkWired,
@@ -16,8 +16,17 @@ import { useUserScans } from "@/lib/hooks/useUserScans";
 import { useAuth } from "@/lib/context/AuthContext";
 import { auth } from "@/lib/firebase/firebaseClient";
 
+type TabKey = "overview" | "newScan" | "history";
+
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [scannerType, setScannerType] = useState<"nmap" | "openvas">("nmap");
+  const [targetInput, setTargetInput] = useState("");
+  const [optionsInput, setOptionsInput] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+
   const { userData, loading } = useUserData();
   const { currentUser } = useAuth();
   const { scans: userScans = [], loading: scansLoading } = useUserScans(
@@ -25,75 +34,122 @@ export default function DashboardPage() {
   );
 
   const hasActiveSubscription = userData?.subscriptionStatus === "active";
-  const scansRemaining = hasActiveSubscription
-    ? (userData?.monthlyScansLimit || 0) - (userData?.scansThisMonth || 0)
-    : 0;
+  const scansRemaining = useMemo(() => {
+    if (!userData) return 0;
+    const remaining =
+      (userData.monthlyScansLimit || 0) - (userData.scansThisMonth || 0);
+    return Math.max(0, remaining);
+  }, [userData]);
 
-  // Form state
-  const [scannerType, setScannerType] = useState("nmap" as "nmap" | "openvas");
-  const [targetInput, setTargetInput] = useState("");
-  const [optionsInput, setOptionsInput] = useState("");
-  const [Submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null as string | null);
-  const [submitSuccess, setSubmitSuccess] = useState(null as string | null);
+  const formatDate = (ts: any) => {
+    if (!ts) return "-";
+    if (typeof ts.toDate === "function") return ts.toDate().toLocaleString();
+    return new Date(ts).toLocaleString();
+  };
 
-  // Debug logging
-  console.log("🎯 Dashboard state:", {
-    loading,
-    hasActiveSubscription,
-    subscriptionStatus: userData?.subscriptionStatus,
-    currentPlan: userData?.currentPlan,
-    monthlyScansLimit: userData?.monthlyScansLimit,
-    scansRemaining,
-  });
+  const computeDurationSeconds = (start: any, end: any) => {
+    if (!start || !end) return "-";
+    const startMs =
+      typeof start.toDate === "function"
+        ? start.toDate().getTime()
+        : new Date(start).getTime();
+    const endMs =
+      typeof end.toDate === "function"
+        ? end.toDate().getTime()
+        : new Date(end).getTime();
+    return `${Math.max(0, Math.round((endMs - startMs) / 1000))}s`;
+  };
+
+  const renderSummary = (scan: any) => {
+    const rs = scan.resultsSummary;
+    if (!rs) return scan.errorMessage || "-";
+    if (typeof rs === "string") return rs;
+    if (rs.summaryText) return rs.summaryText;
+    const parts: string[] = [];
+    if (rs.totalHosts !== undefined) parts.push(`${rs.totalHosts} hosts`);
+    if (rs.openPorts !== undefined) parts.push(`${rs.openPorts} open ports`);
+    if (rs.vulnerabilities) {
+      const v = rs.vulnerabilities;
+      const vulnParts: string[] = [];
+      if (v.critical) vulnParts.push(`C:${v.critical}`);
+      if (v.high) vulnParts.push(`H:${v.high}`);
+      if (v.medium) vulnParts.push(`M:${v.medium}`);
+      if (v.low) vulnParts.push(`L:${v.low}`);
+      if (vulnParts.length) parts.push(`vuln ${vulnParts.join("/")}`);
+    }
+    return parts.length > 0 ? parts.join(" • ") : "-";
+  };
+
+  const recentScans = userScans.slice(0, 4);
 
   return (
-    <main className="flex min-h-screen flex-col pb-10">
-      <div className="w-full bg-base-200 py-8">
-        <div className="max-w-7xl mx-auto px-8">
-          <h1 className="text-4xl font-bold mb-2">
-            Security Scanner Dashboard
-          </h1>
-          <p className="text-lg opacity-80">
-            Launch and manage your vulnerability scans
-          </p>
-        </div>
+    <main className="flex min-h-screen flex-col pb-12 bg-[var(--bg)] text-[--text] relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none opacity-60">
+        <div className="absolute inset-6 neon-grid" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-8 py-8 w-full">
-        {/* UPGRADE BANNER - Only show if no active subscription */}
+      <div className="relative w-full max-w-7xl mx-auto px-6 lg:px-8 py-10 space-y-8">
+        <div className="neon-card p-6 lg:p-8">
+          <div className="flex flex-wrap items-center gap-4 justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="neon-chip">Dashboard</span>
+                <span className="neon-badge-muted">
+                  Security control center
+                </span>
+              </div>
+              <h1 className="text-3xl lg:text-4xl font-black">
+                Security Scanner Dashboard
+              </h1>
+              <p className="text-base neon-subtle">
+                Launch and manage your vulnerability scans with hosted Nmap and
+                OpenVAS.
+              </p>
+            </div>
+            <Link
+              href="/#pricing"
+              className="px-4 py-3 neon-outline-btn text-sm font-semibold"
+            >
+              View Plans
+            </Link>
+          </div>
+        </div>
+
         {!loading && !hasActiveSubscription && (
-          <div className="alert alert-warning shadow-xl mb-8 border-2 border-warning">
-            <div className="flex items-center gap-4 w-full">
-              <FontAwesomeIcon icon={faCrown} className="text-4xl" />
-              <div className="flex-1">
-                <h3 className="font-bold text-xl mb-1">
-                  🚀 Upgrade to Start Scanning
-                </h3>
-                <p className="text-sm">
-                  Subscribe now to unlock powerful Nmap and OpenVAS
-                  vulnerability scanning. Starting at just $96/year • 7-day
-                  money-back guarantee
+          <div className="neon-card">
+            <div className="flex items-start gap-4 w-full">
+              <div className="p-3 rounded-xl bg-[rgba(255,90,103,0.12)] border border-[rgba(255,90,103,0.35)] text-[var(--danger)]">
+                <FontAwesomeIcon icon={faCrown} className="text-2xl" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <h3 className="font-bold text-xl">Upgrade to Start Scanning</h3>
+                <p className="text-sm neon-subtle">
+                  Subscribe to unlock hosted Nmap and OpenVAS scanning. Starting
+                  at $96/year • 7-day money-back guarantee.
                 </p>
               </div>
-              <Link href="/#pricing" className="btn btn-primary btn-lg gap-2">
-                <FontAwesomeIcon icon={faRocket} />
+              <Link
+                href="/#pricing"
+                className="neon-primary-btn px-4 py-3 text-sm font-semibold"
+              >
+                <FontAwesomeIcon icon={faRocket} className="mr-2" />
                 View Plans
               </Link>
             </div>
           </div>
         )}
 
-        {/* SUBSCRIPTION STATUS - Show if active */}
         {!loading && hasActiveSubscription && (
-          <div className="alert alert-success shadow-xl mb-8">
+          <div className="neon-card">
             <div className="flex items-center gap-4 w-full">
-              <FontAwesomeIcon icon={faShieldHalved} className="text-2xl" />
+              <div className="p-3 rounded-xl bg-[rgba(51,255,153,0.12)] border border-[rgba(51,255,153,0.35)] text-[var(--success)]">
+                <FontAwesomeIcon icon={faShieldHalved} className="text-2xl" />
+              </div>
               <div className="flex-1">
                 <h3 className="font-bold text-lg">
                   {userData?.currentPlan?.toUpperCase()} Plan Active
                 </h3>
-                <p className="text-sm">
+                <p className="text-sm neon-subtle">
                   {scansRemaining} of {userData?.monthlyScansLimit} scans
                   remaining this month
                 </p>
@@ -102,49 +158,59 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="tabs tabs-boxed mb-8">
-          <a
-            className={`tab ${activeTab === "overview" ? "tab-active" : ""}`}
+        <div className="flex flex-wrap gap-3">
+          <button
+            className={`px-4 py-2 rounded-xl border ${
+              activeTab === "overview"
+                ? "border-[var(--primary)] bg-[rgba(0,254,217,0.08)]"
+                : "border-[var(--border)]"
+            }`}
             onClick={() => setActiveTab("overview")}
           >
             Overview
-          </a>
-          <a
-            className={`tab ${activeTab === "newScan" ? "tab-active" : ""}`}
+          </button>
+          <button
+            className={`px-4 py-2 rounded-xl border flex items-center gap-2 ${
+              activeTab === "newScan"
+                ? "border-[var(--primary)] bg-[rgba(0,254,217,0.08)]"
+                : "border-[var(--border)]"
+            }`}
             onClick={() => setActiveTab("newScan")}
           >
-            <FontAwesomeIcon icon={faPlus} className="mr-2" />
+            <FontAwesomeIcon icon={faPlus} />
             New Scan
-          </a>
-          <a
-            className={`tab ${activeTab === "history" ? "tab-active" : ""}`}
+          </button>
+          <button
+            className={`px-4 py-2 rounded-xl border flex items-center gap-2 ${
+              activeTab === "history"
+                ? "border-[var(--primary)] bg-[rgba(0,254,217,0.08)]"
+                : "border-[var(--border)]"
+            }`}
             onClick={() => setActiveTab("history")}
           >
-            <FontAwesomeIcon icon={faHistory} className="mr-2" />
+            <FontAwesomeIcon icon={faHistory} />
             Scan History
-          </a>
+          </button>
         </div>
 
-        {/* Overview Tab */}
         {activeTab === "overview" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="card bg-base-100 shadow-xl">
-              <div className="card-body">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="neon-card p-6">
+              <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="text-primary text-4xl">
+                  <div className="text-[var(--primary)] text-4xl">
                     <FontAwesomeIcon icon={faNetworkWired} />
                   </div>
                   <div>
-                    <h2 className="card-title">Nmap Scanner</h2>
-                    <p className="text-sm opacity-80">
+                    <h2 className="text-xl font-bold">Nmap Scanner</h2>
+                    <p className="text-sm neon-subtle">
                       Network discovery and port scanning
                     </p>
                   </div>
                 </div>
-                <div className="card-actions justify-end mt-4">
+                <div className="flex justify-end">
                   <button
-                    className="btn btn-primary"
+                    className="neon-outline-btn px-4 py-2 text-sm font-semibold"
                     onClick={() => {
                       setScannerType("nmap");
                       setActiveTab("newScan");
@@ -156,22 +222,22 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="card bg-base-100 shadow-xl">
-              <div className="card-body">
+            <div className="neon-card p-6">
+              <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="text-primary text-4xl">
+                  <div className="text-[var(--primary)] text-4xl">
                     <FontAwesomeIcon icon={faShieldHalved} />
                   </div>
                   <div>
-                    <h2 className="card-title">OpenVAS Scanner</h2>
-                    <p className="text-sm opacity-80">
+                    <h2 className="text-xl font-bold">OpenVAS Scanner</h2>
+                    <p className="text-sm neon-subtle">
                       Comprehensive vulnerability assessment
                     </p>
                   </div>
                 </div>
-                <div className="card-actions justify-end mt-4">
+                <div className="flex justify-end">
                   <button
-                    className="btn btn-primary"
+                    className="neon-outline-btn px-4 py-2 text-sm font-semibold"
                     onClick={() => {
                       setScannerType("openvas");
                       setActiveTab("newScan");
@@ -183,126 +249,168 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Recent Scans */}
-            <div className="col-span-1 md:col-span-2">
-              <div className="card bg-base-100 shadow-xl">
-                <div className="card-body">
-                  <h2 className="card-title mb-4">Recent Scans</h2>
-                  <div className="overflow-x-auto">
-                    <table className="table">
-                      <thead>
+            <div className="lg:col-span-2">
+              <div className="neon-card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold">Recent Scans</h2>
+                  <button
+                    className="text-sm neon-outline-btn px-3 py-2"
+                    onClick={() => setActiveTab("history")}
+                  >
+                    View history
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="neon-table">
+                    <thead>
+                      <tr>
+                        <th>Type</th>
+                        <th>Target</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Report</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scansLoading && (
                         <tr>
-                          <th>Type</th>
-                          <th>Target</th>
-                          <th>Status</th>
-                          <th>Date</th>
-                          <th>Actions</th>
+                          <td colSpan={5} className="text-center opacity-70">
+                            Loading scans...
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
+                      )}
+
+                      {!scansLoading && recentScans.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="text-center opacity-60">
+                          <td
+                            colSpan={5}
+                            className="text-center text-[var(--text-muted)]"
+                          >
                             No scans yet. Create your first scan to get started!
                           </td>
                         </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                      )}
+
+                      {!scansLoading &&
+                        recentScans.map((scan: any) => (
+                          <tr key={scan.scanId}>
+                            <td className="capitalize">{scan.type}</td>
+                            <td>{scan.target}</td>
+                            <td className="uppercase text-xs tracking-wide">
+                              {scan.status}
+                            </td>
+                            <td>
+                              {formatDate(scan.startTime || scan.createdAt)}
+                            </td>
+                            <td>
+                              {scan.gcpSignedUrl || scan.gcpStorageUrl ? (
+                                <a
+                                  href={scan.gcpSignedUrl || scan.gcpStorageUrl}
+                                  target="_blank"
+                                  rel="noreferrer noopener"
+                                  className="link"
+                                >
+                                  View
+                                </a>
+                              ) : (
+                                <span className="opacity-60">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* New Scan Tab */}
         {activeTab === "newScan" && (
-          <div className="max-w-3xl mx-auto">
-            {/* PAYWALL GATE - Only show if no active subscription */}
+          <div className="max-w-3xl mx-auto w-full">
             {!hasActiveSubscription ? (
-              <div className="card bg-gradient-to-br from-primary to-secondary text-primary-content shadow-2xl mb-6">
-                <div className="card-body items-center text-center py-12">
-                  <FontAwesomeIcon
-                    icon={faCrown}
-                    className="text-7xl mb-4 animate-pulse"
-                  />
-                  <h2 className="card-title text-3xl mb-4">Premium Feature</h2>
-                  <p className="text-lg mb-6 max-w-md">
-                    Running security scans requires an active subscription.
-                    Choose a plan that fits your needs and start protecting your
-                    infrastructure today!
-                  </p>
-                  <div className="flex gap-4">
-                    <Link
-                      href="/#pricing"
-                      className="btn btn-lg btn-accent gap-2"
-                    >
-                      <FontAwesomeIcon icon={faRocket} />
-                      Upgrade Now
-                    </Link>
-                  </div>
-                  <p className="text-sm mt-4 opacity-80">
-                    ✓ 7-day money-back guarantee • ✓ Cancel anytime • ✓ No
-                    hidden fees
-                  </p>
+              <div className="neon-card text-center py-10 px-6">
+                <FontAwesomeIcon
+                  icon={faCrown}
+                  className="text-5xl mb-4 text-[var(--warning)]"
+                />
+                <h2 className="text-2xl font-bold mb-3">Premium Feature</h2>
+                <p className="text-base neon-subtle max-w-xl mx-auto mb-6">
+                  Running security scans requires an active subscription. Choose
+                  a plan that fits your needs and start protecting your
+                  infrastructure today.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <Link
+                    href="/#pricing"
+                    className="neon-primary-btn px-5 py-3 text-sm font-semibold"
+                  >
+                    <FontAwesomeIcon icon={faRocket} className="mr-2" />
+                    Upgrade Now
+                  </Link>
+                  <span className="text-xs neon-subtle">
+                    7-day money-back • Cancel anytime • No hidden fees
+                  </span>
                 </div>
               </div>
             ) : (
-              <div className="card bg-base-100 shadow-xl">
-                <div className="card-body">
-                  <h2 className="card-title mb-6">Create New Scan</h2>
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      setSubmitError(null);
-                      setSubmitSuccess(null);
-                      setSubmitting(true);
+              <div className="neon-card p-6">
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <h2 className="text-xl font-bold">Create New Scan</h2>
+                  <span className="neon-badge-muted">Authenticated</span>
+                </div>
 
-                      try {
-                        const user = auth.currentUser;
-                        if (!user) throw new Error("Not authenticated");
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setSubmitError(null);
+                    setSubmitSuccess(null);
+                    setSubmitting(true);
 
-                        const token = await user.getIdToken(true);
+                    try {
+                      const user = auth.currentUser;
+                      if (!user) throw new Error("Not authenticated");
 
-                        const res = await fetch("/api/scans", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`,
-                          },
-                          body: JSON.stringify({
-                            type: scannerType,
-                            target: targetInput,
-                            options: optionsInput,
-                          }),
-                        });
+                      const token = await user.getIdToken(true);
 
-                        const data = await res.json();
-                        if (!res.ok) {
-                          setSubmitError(
-                            data?.error || "Failed to create scan",
-                          );
-                        } else {
-                          setSubmitSuccess(
-                            `Scan queued: ${data.scanId || "queued"}`,
-                          );
-                          setTargetInput("");
-                          setOptionsInput("");
-                          // Switch to history — Firestore listener will reflect new entry
-                          setActiveTab("history");
-                        }
-                      } catch (err: any) {
-                        setSubmitError(err.message || "Unknown error");
-                      } finally {
-                        setSubmitting(false);
+                      const res = await fetch("/api/scans", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({
+                          type: scannerType,
+                          target: targetInput,
+                          options: optionsInput,
+                        }),
+                      });
+
+                      const data = await res.json();
+                      if (!res.ok) {
+                        setSubmitError(data?.error || "Failed to create scan");
+                      } else {
+                        setSubmitSuccess(
+                          `Scan queued: ${data.scanId || "queued"}`,
+                        );
+                        setTargetInput("");
+                        setOptionsInput("");
+                        setActiveTab("history");
                       }
-                    }}
-                  >
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text">Scanner Type</span>
+                    } catch (err: any) {
+                      setSubmitError(err.message || "Unknown error");
+                    } finally {
+                      setSubmitting(false);
+                    }
+                  }}
+                >
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-[var(--text)]">
+                        Scanner Type
                       </label>
                       <select
-                        className="select select-bordered"
+                        className="neon-input w-full py-3"
                         value={scannerType}
                         onChange={(e) =>
                           setScannerType(e.target.value as "nmap" | "openvas")
@@ -315,238 +423,149 @@ export default function DashboardPage() {
                       </select>
                     </div>
 
-                    <div className="form-control mt-4">
-                      <label className="label">
-                        <span className="label-text">Target IP/Domain</span>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-[var(--text)]">
+                        Target IP/Domain
                       </label>
                       <input
                         type="text"
                         placeholder="e.g., 192.168.1.1 or example.com"
-                        className="input input-bordered"
+                        className="neon-input w-full py-3"
                         value={targetInput}
                         onChange={(e) => setTargetInput(e.target.value)}
                         required
                       />
                     </div>
 
-                    <div className="form-control mt-4">
-                      <label className="label">
-                        <span className="label-text">Scan Options</span>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-[var(--text)]">
+                        Scan Options
                       </label>
                       <textarea
-                        className="textarea textarea-bordered"
+                        className="neon-input w-full py-3"
                         placeholder="Additional scan parameters (optional)"
                         rows={3}
                         value={optionsInput}
                         onChange={(e) => setOptionsInput(e.target.value)}
-                      ></textarea>
+                      />
                     </div>
 
-                    <div className="card-actions justify-end mt-6">
+                    <div className="flex justify-end pt-2">
                       <button
-                        className="btn btn-primary btn-lg"
+                        className="neon-primary-btn px-5 py-3 text-sm font-semibold flex items-center gap-2"
                         type="submit"
-                        disabled={Submitting}
+                        disabled={submitting}
                       >
-                        <FontAwesomeIcon icon={faRocket} className="mr-2" />
-                        {Submitting ? "Queueing..." : "Launch Scan"}
+                        <FontAwesomeIcon icon={faRocket} />
+                        {submitting ? "Queueing..." : "Launch Scan"}
                       </button>
                     </div>
 
                     {submitError && (
-                      <div className="alert alert-error mt-4">
+                      <div className="mt-1 text-sm text-[var(--danger)]">
                         {submitError}
                       </div>
                     )}
                     {submitSuccess && (
-                      <div className="alert alert-success mt-4">
+                      <div className="mt-1 text-sm text-[var(--success)]">
                         {submitSuccess}
                       </div>
                     )}
-                  </form>
-
-                  <div className="alert alert-info mt-4">
-                    <div>
-                      <p className="text-sm">
-                        💡 <strong>Scans remaining:</strong> {scansRemaining} /{" "}
-                        {userData?.monthlyScansLimit}
-                      </p>
-                    </div>
                   </div>
-                </div>
-              </div>
-            )}
+                </form>
 
-            {/* Disabled form shown below paywall */}
-            {!hasActiveSubscription && (
-              <div className="card bg-base-100 shadow-xl opacity-50 pointer-events-none">
-                <div className="card-body">
-                  <h2 className="card-title mb-6">Create New Scan</h2>
-
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text">Scanner Type</span>
-                    </label>
-                    <select className="select select-bordered">
-                      <option>Nmap - Network Scanner</option>
-                      <option>OpenVAS - Vulnerability Scanner</option>
-                    </select>
-                  </div>
-
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text">Target (IP or Domain)</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="192.168.1.1 or example.com"
-                      className="input input-bordered"
-                    />
-                  </div>
-
-                  <div className="card-actions justify-end mt-6">
-                    <button className="btn btn-primary">Launch Scan</button>
-                  </div>
+                <div className="mt-4 text-sm neon-subtle">
+                  💡 <strong>Scans remaining:</strong> {scansRemaining} /{" "}
+                  {userData?.monthlyScansLimit}
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* History Tab */}
         {activeTab === "history" && (
-          <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
-              <h2 className="card-title mb-4">Scan History</h2>
-              <div className="overflow-x-auto">
-                <table className="table">
-                  <thead>
+          <div className="neon-card p-6">
+            <h2 className="text-xl font-bold mb-4">Scan History</h2>
+            <div className="overflow-x-auto">
+              <table className="neon-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Target</th>
+                    <th>Status</th>
+                    <th>Started</th>
+                    <th>Duration</th>
+                    <th>Findings</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scansLoading && (
                     <tr>
-                      <th>ID</th>
-                      <th>Type</th>
-                      <th>Target</th>
-                      <th>Status</th>
-                      <th>Started</th>
-                      <th>Duration</th>
-                      <th>Findings</th>
-                      <th>Actions</th>
+                      <td colSpan={8} className="text-center opacity-70">
+                        Loading scans...
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {scansLoading ? (
-                      <tr>
-                        <td colSpan={8} className="text-center opacity-70">
-                          Loading scans...
-                        </td>
-                      </tr>
-                    ) : userScans && userScans.length > 0 ? (
-                      userScans.slice().map((scan: any) => {
-                        const toDate = (ts: any) =>
-                          ts?.toDate
-                            ? ts.toDate().toLocaleString()
-                            : ts
-                              ? new Date(ts).toLocaleString()
-                              : "-";
-                        const duration =
-                          scan.startTime && scan.endTime
-                            ? Math.max(
-                                0,
-                                (scan.endTime.toDate
-                                  ? scan.endTime.toDate().getTime()
-                                  : new Date(scan.endTime).getTime()) -
-                                  (scan.startTime.toDate
-                                    ? scan.startTime.toDate().getTime()
-                                    : new Date(scan.startTime).getTime()),
-                              ) / 1000
-                            : "-";
+                  )}
 
-                        return (
-                          <tr key={scan.scanId}>
-                            <td>{scan.scanId}</td>
-                            <td>{scan.type}</td>
-                            <td>{scan.target}</td>
-                            <td>{scan.status}</td>
-                            <td>{toDate(scan.startTime)}</td>
-                            <td>
-                              {typeof duration === "number"
-                                ? `${duration}s`
-                                : duration}
-                            </td>
-                            <td className="max-w-xs truncate">
-                              {(() => {
-                                const rs = scan.resultsSummary;
-                                if (!rs) return scan.errorMessage || "-";
-                                // If resultsSummary is a string (legacy), show it
-                                if (typeof rs === "string") return rs;
-                                // If worker provided a human-readable summaryText, show that
-                                if ((rs as any).summaryText)
-                                  return (rs as any).summaryText;
-                                // Otherwise, fall back to a small structured summary
-                                const parts: string[] = [];
-                                if ((rs as any).totalHosts !== undefined)
-                                  parts.push(`${(rs as any).totalHosts} hosts`);
-                                if ((rs as any).openPorts !== undefined)
-                                  parts.push(
-                                    `${(rs as any).openPorts} open ports`,
-                                  );
-                                if ((rs as any).vulnerabilities) {
-                                  const v = (rs as any).vulnerabilities;
-                                  const vulnParts: string[] = [];
-                                  if (v.critical)
-                                    vulnParts.push(`C:${v.critical}`);
-                                  if (v.high) vulnParts.push(`H:${v.high}`);
-                                  if (v.medium) vulnParts.push(`M:${v.medium}`);
-                                  if (v.low) vulnParts.push(`L:${v.low}`);
-                                  if (vulnParts.length)
-                                    parts.push(`vuln ${vulnParts.join("/")}`);
-                                }
-                                return parts.length > 0
-                                  ? parts.join(" • ")
-                                  : "-";
-                              })()}
-                            </td>
-                            <td>
-                              {scan.gcpSignedUrl ? (
-                                <div className="flex flex-col">
-                                  <a
-                                    href={scan.gcpSignedUrl}
-                                    target="_blank"
-                                    rel="noreferrer noopener"
-                                    className="link"
-                                  >
-                                    View
-                                  </a>
-                                  <span className="text-xs opacity-70">
-                                    Link valid for 7 days
-                                  </span>
-                                </div>
-                              ) : scan.gcpStorageUrl ? (
-                                <a
-                                  href={scan.gcpStorageUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="link"
-                                >
-                                  View
-                                </a>
-                              ) : (
-                                <span className="opacity-60">—</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan={8} className="text-center opacity-60">
-                          No scan history available. Your completed scans will
-                          appear here.
+                  {!scansLoading &&
+                    userScans.map((scan: any) => (
+                      <tr key={scan.scanId}>
+                        <td>{scan.scanId}</td>
+                        <td className="capitalize">{scan.type}</td>
+                        <td>{scan.target}</td>
+                        <td className="uppercase text-xs tracking-wide">
+                          {scan.status}
+                        </td>
+                        <td>{formatDate(scan.startTime || scan.createdAt)}</td>
+                        <td>
+                          {computeDurationSeconds(scan.startTime, scan.endTime)}
+                        </td>
+                        <td className="max-w-xs truncate">
+                          {renderSummary(scan)}
+                        </td>
+                        <td>
+                          {scan.gcpSignedUrl ? (
+                            <div className="flex flex-col">
+                              <a
+                                href={scan.gcpSignedUrl}
+                                target="_blank"
+                                rel="noreferrer noopener"
+                                className="link"
+                              >
+                                View
+                              </a>
+                              <span className="text-xs opacity-70">
+                                Link valid for 7 days
+                              </span>
+                            </div>
+                          ) : scan.gcpStorageUrl ? (
+                            <a
+                              href={scan.gcpStorageUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="link"
+                            >
+                              View
+                            </a>
+                          ) : (
+                            <span className="opacity-60">—</span>
+                          )}
                         </td>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    ))}
+
+                  {!scansLoading && userScans.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="text-center opacity-60">
+                        No scan history available. Your completed scans will
+                        appear here.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

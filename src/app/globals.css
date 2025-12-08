@@ -1,16 +1,196 @@
+@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;500;600;700&family=Roboto+Slab:wght@400;600&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom theme overrides */
-body {
-	/* Background color requested */
-	background-color: #0a0a2300;
+:root {
+	--bg: #0a0a23;
+	--panel: #0f162b;
+	--panel-soft: rgba(255, 255, 255, 0.02);
+	--border: #1e2a3f;
+	--border-strong: rgba(0, 254, 217, 0.18);
+	--text: #e8f6ff;
+	--text-muted: #c9d6e3;
+	--primary: #00fed9;
+	--primary-strong: #07c9b3;
+	--secondary: #008cff;
+	--success: #33ff99;
+	--warning: #f5a524;
+	--danger: #ff5a67;
+	--info: #45b7ff;
+	--shadow-glow: 0 0 35px rgba(0, 254, 217, 0.18);
 }
 
-/* Override DaisyUI theme variables for the active theme */
+body {
+	background: radial-gradient(circle at 20% 20%, rgba(0, 140, 255, 0.08), transparent 25%),
+		radial-gradient(circle at 80% 10%, rgba(0, 254, 217, 0.07), transparent 23%),
+		radial-gradient(circle at 50% 80%, rgba(0, 140, 255, 0.05), transparent 28%),
+		var(--bg);
+	color: var(--text);
+	min-height: 100vh;
+	font-family: "Share Tech Mono", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+		"Segoe UI", sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: "Share Tech Mono", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+		"Segoe UI", sans-serif;
+}
+
+/* DaisyUI override for the active theme (cupcake is set in layout) */
 body[data-theme="cupcake"] {
-	/* 1st accent / primary color override */
-	--primary: #0a0a2300;
-	--accent: #0a0a2300;
+	--p: 172 100% 50%;
+	--pf: 172 100% 50%;
+	--pc: 192 88% 96%;
+	--s: 210 100% 55%;
+	--sf: 210 100% 55%;
+	--sc: 192 88% 96%;
+	--a: 192 88% 60%;
+	--ac: 192 88% 96%;
+	--n: 226 33% 14%;
+	--nc: 220 30% 92%;
+	--b1: 230 40% 8%;
+	--b2: 230 38% 10%;
+	--b3: 230 36% 12%;
+	--bc: 220 30% 92%;
+}
+
+/* Utility skins for the neon dark system */
+.neon-surface {
+	background: var(--panel-soft);
+	border: 1px solid var(--border-strong);
+	box-shadow: var(--shadow-glow);
+	backdrop-filter: blur(8px);
+}
+
+.neon-card {
+	background: linear-gradient(135deg, rgba(15, 22, 43, 0.95), rgba(12, 18, 34, 0.92));
+	border: 1px solid var(--border-strong);
+	box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), var(--shadow-glow);
+	border-radius: 18px;
+}
+
+.neon-border {
+	border: 1px solid var(--border);
+	border-radius: 14px;
+}
+
+.neon-grid {
+	background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+		linear-gradient(0deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+	background-size: 32px 32px;
+	border-radius: 18px;
+	border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.neon-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.25rem 0.75rem;
+	border-radius: 9999px;
+	background: linear-gradient(120deg, rgba(0, 254, 217, 0.2), rgba(0, 140, 255, 0.16));
+	color: var(--text);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	font-size: 0.72rem;
+	border: 1px solid var(--border-strong);
+}
+
+.neon-primary-btn {
+	background: linear-gradient(135deg, var(--primary), var(--secondary));
+	color: #041018;
+	border: 1px solid rgba(0, 254, 217, 0.6);
+	border-radius: 12px;
+	box-shadow: 0 12px 35px rgba(0, 254, 217, 0.25);
+	transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.neon-primary-btn:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 18px 45px rgba(0, 254, 217, 0.32);
+}
+
+.neon-outline-btn {
+	border: 1px solid var(--primary);
+	color: var(--text);
+	background: rgba(0, 254, 217, 0.05);
+	border-radius: 12px;
+	transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.neon-outline-btn:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 12px 30px rgba(0, 140, 255, 0.25);
+}
+
+.neon-divider {
+	border-top: 1px solid var(--border);
+}
+
+.neon-subtle {
+	color: var(--text-muted);
+}
+
+.neon-input {
+	background: #0f162b;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	color: var(--text);
+	transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.neon-input:focus {
+	outline: none;
+	border-color: var(--primary);
+	box-shadow: 0 0 0 3px rgba(0, 254, 217, 0.15);
+}
+
+.neon-table {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+.neon-table th,
+.neon-table td {
+	border-bottom: 1px solid var(--border);
+	padding: 0.75rem 0.5rem;
+	color: var(--text);
+}
+
+.neon-table th {
+	color: var(--text-muted);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	font-size: 0.75rem;
+}
+
+.neon-badge-muted {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.25rem 0.65rem;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	color: var(--text-muted);
+	font-size: 0.78rem;
+}
+
+.neon-section-title {
+	font-weight: 800;
+	letter-spacing: -0.02em;
+}
+
+.neon-hero-title {
+	background: linear-gradient(120deg, var(--primary), var(--secondary));
+	-webkit-background-clip: text;
+	color: transparent;
 }
