@@ -27,6 +27,9 @@ export const metadata: Metadata = {
     description:
       "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and OpenVAS services on fast, optimized servers.",
   },
+  icons: {
+    icon: "/HA-logo.png",
+  },
 };
 
 export default function RootLayout({
