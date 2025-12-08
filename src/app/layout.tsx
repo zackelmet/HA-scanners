@@ -10,20 +10,20 @@ import "@fortawesome/fontawesome-svg-core/styles.css";
 config.autoAddCss = false;
 
 export const metadata: Metadata = {
-  title: "HA - Hosted Scanners",
+  title: "Hacker Analytics - Hosted Security Scanners",
   description:
     "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and OpenVAS services on fast, optimized servers.",
   metadataBase: new URL("https://hackeranalytics.com"),
   openGraph: {
-    title: "HA - Hosted Scanners",
+    title: "Hacker Analytics - Hosted Security Scanners",
     description:
       "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and OpenVAS services on fast, optimized servers.",
     url: "https://hackeranalytics.com",
-    siteName: "HA",
+    siteName: "Hacker Analytics",
   },
   twitter: {
     card: "summary_large_image",
-    title: "HA - Hosted Scanners",
+    title: "Hacker Analytics - Hosted Security Scanners",
     description:
       "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and OpenVAS services on fast, optimized servers.",
   },
