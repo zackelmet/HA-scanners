@@ -76,24 +76,31 @@ export async function POST(request: NextRequest) {
         { merge: true },
       );
 
-      // Also update the global scan document for audit
+      // Also update (or create) the global scan document for audit
       const globalScanRef = firestore.collection("scans").doc(scanId);
-      await globalScanRef.update({
-        status: normalizedStatus,
-        resultsSummary: normalizedSummary,
-        gcpStorageUrl: normalizedGcsUrl,
-        // store signed url on global doc too for convenience (may expire)
-        gcpSignedUrl: normalizedSignedUrl,
-        gcpSignedUrlExpires: normalizedSignedUrlExpires,
-        errorMessage: errorMessage || null,
-        scannerType: scannerType || null,
-        billingUnits: typeof billingUnits === "number" ? billingUnits : null,
-        endTime: now,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      await globalScanRef.set(
+        {
+          scanId,
+          userId,
+          status: normalizedStatus,
+          resultsSummary: normalizedSummary,
+          gcpStorageUrl: normalizedGcsUrl,
+          // store signed url on global doc too for convenience (may expire)
+          gcpSignedUrl: normalizedSignedUrl,
+          gcpSignedUrlExpires: normalizedSignedUrlExpires,
+          errorMessage: errorMessage || null,
+          scannerType: scannerType || null,
+          billingUnits: typeof billingUnits === "number" ? billingUnits : null,
+          endTime: now,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
 
-      // Increment per-user usage counters for this scannerType (transactional)
-      if (scannerType) {
+      // Increment per-user usage counters for this scannerType (transactional) on success only
+      const shouldBill = normalizedStatus === "completed";
+      if (scannerType && shouldBill) {
         const usageRef = firestore.collection("usage").doc(userId);
         const incrementBy = typeof billingUnits === "number" ? billingUnits : 1;
         try {

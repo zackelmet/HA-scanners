@@ -27,7 +27,24 @@ app.post("/process", async (req, res) => {
       // eslint-disable-next-line global-require, import/no-dynamic-require
       const runner = require(runnerPath);
       if (typeof runner.run === "function") {
-        runnerResult = await runner.run(job);
+        try {
+          runnerResult = await runner.run(job);
+        } catch (runnerErr) {
+          console.error(`Runner '${scannerType}' failed:`, runnerErr);
+          runnerResult = {
+            status: "failed",
+            scanId,
+            userId,
+            resultsSummary: null,
+            rawOutput: null,
+            billingUnits: 0,
+            scannerType,
+            errorMessage:
+              runnerErr && runnerErr.message
+                ? runnerErr.message
+                : "Runner execution failed",
+          };
+        }
       } else {
         console.warn(`Runner ${runnerPath} does not export run()`);
       }
@@ -100,6 +117,7 @@ app.post("/process", async (req, res) => {
           // include scanner metadata for the SaaS to persist and bill
           scannerType: runnerResult.scannerType || scannerType,
           billingUnits: runnerResult.billingUnits || 1,
+          errorMessage: runnerResult.errorMessage || null,
         };
 
         const resp = await fetch(WEBHOOK_URL, {
