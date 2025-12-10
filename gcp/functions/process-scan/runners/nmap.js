@@ -73,7 +73,7 @@ module.exports.run = async function run(job) {
   // Build a safe argument list — only allow a limited set of flags to prevent injection.
   const nmapBinary = process.env.NMAP_PATH || "nmap";
   const timeoutMs = Number(process.env.NMAP_TIMEOUT_MS || 240000);
-  const args = ["-oX", "-", "-T4", "-sV", target];
+  const args = ["-oX", "-", "-T4", "-sT", "-p", "22,80,443", "-Pn", target];
 
   // Optional: allow top-ports and specific ports, sanitized to numbers/commas
   if (options.topPorts) {
