@@ -21,6 +21,7 @@ app.post("/process", async (req, res) => {
 
     // Dynamic runner loader: try to load a runner module from ./runners/{type}.js
     let runnerResult = null;
+    let runnerError = null;
     const scannerType = String(job.type || "unknown").toLowerCase();
     try {
       const runnerPath = `./runners/${scannerType}.js`;
@@ -53,6 +54,7 @@ app.post("/process", async (req, res) => {
         `No specific runner for type '${scannerType}', using fallback.`,
         err && err.message,
       );
+      runnerError = err;
     }
 
     // Fallback simple result if no runner provided or runner failed
@@ -74,6 +76,8 @@ app.post("/process", async (req, res) => {
         rawOutput: null,
         billingUnits: 1,
         scannerType: scannerType,
+        runnerError:
+          runnerError && runnerError.message ? runnerError.message : null,
       };
     }
 
