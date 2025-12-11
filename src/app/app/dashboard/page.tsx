@@ -47,8 +47,16 @@ export default function DashboardPage() {
     return new Date(ts).toLocaleString();
   };
 
-  const computeDurationSeconds = (start: any, end: any) => {
+  const computeDurationSeconds = (scan: any) => {
+    const rsDuration = scan?.resultsSummary?.scanDuration;
+    if (typeof rsDuration === "number" && rsDuration > 0) {
+      return `${Math.max(1, Math.round(rsDuration))}s`;
+    }
+
+    const start = scan?.startTime;
+    const end = scan?.endTime;
     if (!start || !end) return "-";
+
     const startMs =
       typeof start.toDate === "function"
         ? start.toDate().getTime()
@@ -64,10 +72,14 @@ export default function DashboardPage() {
     const rs = scan.resultsSummary;
     if (!rs) return scan.errorMessage || "-";
     if (typeof rs === "string") return rs;
-    if (rs.summaryText) return rs.summaryText;
+
     const parts: string[] = [];
+    if (rs.summaryText) parts.push(rs.summaryText);
     if (rs.totalHosts !== undefined) parts.push(`${rs.totalHosts} hosts`);
     if (rs.openPorts !== undefined) parts.push(`${rs.openPorts} open ports`);
+    if (typeof rs.scanDuration === "number" && rs.scanDuration > 0)
+      parts.push(`~${Math.max(1, Math.round(rs.scanDuration))}s`);
+
     if (rs.vulnerabilities) {
       const v = rs.vulnerabilities;
       const vulnParts: string[] = [];
@@ -77,6 +89,20 @@ export default function DashboardPage() {
       if (v.low) vulnParts.push(`L:${v.low}`);
       if (vulnParts.length) parts.push(`vuln ${vulnParts.join("/")}`);
     }
+
+    const findings = Array.isArray(rs.findings) ? rs.findings : [];
+    if (findings.length > 0) {
+      const openPortFindings = findings
+        .filter((f: any) => (f.title || "").toLowerCase().includes("open port"))
+        .map((f: any) => f.title || f.id)
+        .slice(0, 3);
+
+      if (openPortFindings.length > 0) {
+        const suffix = findings.length > openPortFindings.length ? " …" : "";
+        parts.push(`ports: ${openPortFindings.join(", ")}${suffix}`);
+      }
+    }
+
     return parts.length > 0 ? parts.join(" • ") : "-";
   };
 
@@ -519,9 +545,7 @@ export default function DashboardPage() {
                           {scan.status}
                         </td>
                         <td>{formatDate(scan.startTime || scan.createdAt)}</td>
-                        <td>
-                          {computeDurationSeconds(scan.startTime, scan.endTime)}
-                        </td>
+                        <td>{computeDurationSeconds(scan)}</td>
                         <td className="max-w-xs truncate">
                           {renderSummary(scan)}
                         </td>

@@ -11,12 +11,6 @@ export interface ScanJob {
  * Enqueue (actually: directly POST) a scan job to the worker.
  */
 export async function enqueueScanJob(job: ScanJob): Promise<void> {
-  const projectId = process.env.GCP_PROJECT_ID;
-
-  if (!projectId) {
-    throw new Error("GCP_PROJECT_ID not configured");
-  }
-
   // Cloud Function / Cloud Run URL for the worker
   let functionUrl =
     process.env.GCP_FUNCTION_URL || process.env.GCP_CLOUD_RUN_URL || "";
@@ -30,6 +24,10 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
   // an https:// URL when using an authorization header / OIDC token.
   if (!/^https?:\/\//i.test(functionUrl)) {
     functionUrl = `https://${functionUrl}`;
+  }
+
+  if (!functionUrl || functionUrl === "https://") {
+    throw new Error("Scan worker URL (GCP_CLOUD_RUN_URL) is not configured");
   }
 
   // Validate the final URL and provide a clearer error message earlier
