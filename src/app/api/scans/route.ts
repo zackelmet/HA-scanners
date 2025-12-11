@@ -70,9 +70,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate scan type
-    if (type !== "nmap" && type !== "openvas") {
+    if (type !== "nmap" && type !== "openvas" && type !== "nikto") {
       return NextResponse.json(
-        { error: "Invalid scan type. Must be 'nmap' or 'openvas'" },
+        { error: "Invalid scan type. Must be 'nmap', 'openvas', or 'nikto'" },
         { status: 400 },
       );
     }

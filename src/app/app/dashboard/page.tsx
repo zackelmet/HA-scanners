@@ -3,12 +3,11 @@
 import { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faNetworkWired,
-  faShieldHalved,
   faPlus,
   faHistory,
   faRocket,
   faCrown,
+  faShieldHalved,
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useUserData } from "@/lib/hooks/useUserData";
@@ -16,11 +15,13 @@ import { useUserScans } from "@/lib/hooks/useUserScans";
 import { useAuth } from "@/lib/context/AuthContext";
 import { auth } from "@/lib/firebase/firebaseClient";
 
-type TabKey = "overview" | "newScan" | "history";
+type TabKey = "newScan" | "history";
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
-  const [scannerType, setScannerType] = useState<"nmap" | "openvas">("nmap");
+  const [activeTab, setActiveTab] = useState<TabKey>("history");
+  const [scannerType, setScannerType] = useState<"nmap" | "openvas" | "nikto">(
+    "nmap",
+  );
   const [targetInput, setTargetInput] = useState("");
   const [optionsInput, setOptionsInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -98,8 +99,6 @@ export default function DashboardPage() {
 
     return parts.length > 0 ? parts.join(" • ") : "-";
   };
-
-  const recentScans = userScans.slice(0, 4);
 
   return (
     <main className="flex min-h-screen flex-col pb-12 bg-[var(--bg)] text-[--text] relative overflow-hidden">
@@ -179,16 +178,6 @@ export default function DashboardPage() {
 
         <div className="flex flex-wrap gap-3">
           <button
-            className={`px-4 py-2 rounded-xl border ${
-              activeTab === "overview"
-                ? "border-[var(--primary)] bg-[rgba(0,254,217,0.08)]"
-                : "border-[var(--border)]"
-            }`}
-            onClick={() => setActiveTab("overview")}
-          >
-            Overview
-          </button>
-          <button
             className={`px-4 py-2 rounded-xl border flex items-center gap-2 ${
               activeTab === "newScan"
                 ? "border-[var(--primary)] bg-[rgba(0,254,217,0.08)]"
@@ -211,139 +200,6 @@ export default function DashboardPage() {
             Scan History
           </button>
         </div>
-
-        {activeTab === "overview" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="neon-card p-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="text-[var(--primary)] text-4xl">
-                    <FontAwesomeIcon icon={faNetworkWired} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold">Nmap Scanner</h2>
-                    <p className="text-sm neon-subtle">
-                      Network discovery and port scanning
-                    </p>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    className="neon-outline-btn px-4 py-2 text-sm font-semibold"
-                    onClick={() => {
-                      setScannerType("nmap");
-                      setActiveTab("newScan");
-                    }}
-                  >
-                    Launch Nmap Scan
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="neon-card p-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="text-[var(--primary)] text-4xl">
-                    <FontAwesomeIcon icon={faShieldHalved} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold">OpenVAS Scanner</h2>
-                    <p className="text-sm neon-subtle">
-                      Comprehensive vulnerability assessment
-                    </p>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    className="neon-outline-btn px-4 py-2 text-sm font-semibold"
-                    onClick={() => {
-                      setScannerType("openvas");
-                      setActiveTab("newScan");
-                    }}
-                  >
-                    Launch OpenVAS Scan
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-2">
-              <div className="neon-card p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">Recent Scans</h2>
-                  <button
-                    className="text-sm neon-outline-btn px-3 py-2"
-                    onClick={() => setActiveTab("history")}
-                  >
-                    View history
-                  </button>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="neon-table">
-                    <thead>
-                      <tr>
-                        <th>Type</th>
-                        <th>Target</th>
-                        <th>Status</th>
-                        <th>Date</th>
-                        <th>Report</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {scansLoading && (
-                        <tr>
-                          <td colSpan={5} className="text-center opacity-70">
-                            Loading scans...
-                          </td>
-                        </tr>
-                      )}
-
-                      {!scansLoading && recentScans.length === 0 && (
-                        <tr>
-                          <td
-                            colSpan={5}
-                            className="text-center text-[var(--text-muted)]"
-                          >
-                            No scans yet. Create your first scan to get started!
-                          </td>
-                        </tr>
-                      )}
-
-                      {!scansLoading &&
-                        recentScans.map((scan: any) => (
-                          <tr key={scan.scanId}>
-                            <td className="capitalize">{scan.type}</td>
-                            <td>{scan.target}</td>
-                            <td className="uppercase text-xs tracking-wide">
-                              {scan.status}
-                            </td>
-                            <td>
-                              {formatDate(scan.startTime || scan.createdAt)}
-                            </td>
-                            <td>
-                              {scan.gcpSignedUrl || scan.gcpStorageUrl ? (
-                                <a
-                                  href={scan.gcpSignedUrl || scan.gcpStorageUrl}
-                                  target="_blank"
-                                  rel="noreferrer noopener"
-                                  className="link"
-                                >
-                                  View
-                                </a>
-                              ) : (
-                                <span className="opacity-60">—</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {activeTab === "newScan" && (
           <div className="max-w-3xl mx-auto w-full">
@@ -432,13 +288,16 @@ export default function DashboardPage() {
                         className="neon-input w-full py-3"
                         value={scannerType}
                         onChange={(e) =>
-                          setScannerType(e.target.value as "nmap" | "openvas")
+                          setScannerType(
+                            e.target.value as "nmap" | "openvas" | "nikto",
+                          )
                         }
                       >
                         <option value="nmap">Nmap - Network Scanner</option>
                         <option value="openvas">
                           OpenVAS - Vulnerability Assessment
                         </option>
+                        <option value="nikto">Nikto - Web Scanner</option>
                       </select>
                     </div>
 
