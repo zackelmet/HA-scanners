@@ -100,6 +100,13 @@ export default function DashboardPage() {
     return parts.length > 0 ? parts.join(" • ") : "-";
   };
 
+  const normalizedStatus = (scan: any) => {
+    if (scan?.resultsSummary && scan?.status === "in_progress") {
+      return "completed";
+    }
+    return scan?.status || "-";
+  };
+
   return (
     <main className="flex min-h-screen flex-col pb-12 bg-[var(--bg)] text-[--text] relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none opacity-60">
@@ -394,7 +401,7 @@ export default function DashboardPage() {
                         <td className="capitalize">{scan.type}</td>
                         <td>{scan.target}</td>
                         <td className="uppercase text-xs tracking-wide">
-                          {scan.status}
+                          {normalizedStatus(scan)}
                         </td>
                         <td>{formatDate(scan.startTime || scan.createdAt)}</td>
                         <td>{computeDurationSeconds(scan)}</td>
