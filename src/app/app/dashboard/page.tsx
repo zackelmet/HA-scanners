@@ -107,6 +107,23 @@ export default function DashboardPage() {
     return scan?.status || "-";
   };
 
+  const getReportLinks = (scan: any) => {
+    const usingJsonSigned = Boolean(scan.gcpSignedUrl);
+    const usingPdfSigned = Boolean(scan.gcpReportSignedUrl);
+
+    const jsonUrl = scan.gcpSignedUrl || scan.gcpStorageUrl || null;
+    const pdfUrl = scan.gcpReportSignedUrl || scan.gcpReportStorageUrl || null;
+
+    return {
+      jsonUrl,
+      pdfUrl,
+      jsonExpires: usingJsonSigned ? scan.gcpSignedUrlExpires || null : null,
+      pdfExpires: usingPdfSigned
+        ? scan.gcpReportSignedUrlExpires || null
+        : null,
+    };
+  };
+
   return (
     <main className="flex min-h-screen flex-col pb-12 bg-[var(--bg)] text-[--text] relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none opacity-60">
@@ -409,32 +426,54 @@ export default function DashboardPage() {
                           {renderSummary(scan)}
                         </td>
                         <td>
-                          {scan.gcpSignedUrl ? (
-                            <div className="flex flex-col">
-                              <a
-                                href={scan.gcpSignedUrl}
-                                target="_blank"
-                                rel="noreferrer noopener"
-                                className="link"
-                              >
-                                View
-                              </a>
-                              <span className="text-xs opacity-70">
-                                Link valid for 7 days
-                              </span>
-                            </div>
-                          ) : scan.gcpStorageUrl ? (
-                            <a
-                              href={scan.gcpStorageUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="link"
-                            >
-                              View
-                            </a>
-                          ) : (
-                            <span className="opacity-60">—</span>
-                          )}
+                          {(() => {
+                            const { jsonUrl, pdfUrl, jsonExpires, pdfExpires } =
+                              getReportLinks(scan);
+
+                            if (!jsonUrl && !pdfUrl)
+                              return <span className="opacity-60">—</span>;
+
+                            return (
+                              <div className="flex flex-col gap-1">
+                                {pdfUrl && (
+                                  <a
+                                    href={pdfUrl}
+                                    target="_blank"
+                                    rel="noreferrer noopener"
+                                    className="link"
+                                  >
+                                    PDF report
+                                  </a>
+                                )}
+                                {jsonUrl && (
+                                  <a
+                                    href={jsonUrl}
+                                    target="_blank"
+                                    rel="noreferrer noopener"
+                                    className="link"
+                                  >
+                                    JSON
+                                  </a>
+                                )}
+                                {(jsonExpires || pdfExpires) && (
+                                  <span className="text-xs opacity-70">
+                                    {pdfExpires && (
+                                      <>
+                                        PDF valid until {formatDate(pdfExpires)}
+                                      </>
+                                    )}
+                                    {pdfExpires && jsonExpires && " • "}
+                                    {jsonExpires && (
+                                      <>
+                                        JSON valid until{" "}
+                                        {formatDate(jsonExpires)}
+                                      </>
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                       </tr>
                     ))}

@@ -28,6 +28,10 @@ export async function POST(request: NextRequest) {
       // optional signed URL and expiry sent by worker
       gcpSignedUrl,
       gcpSignedUrlExpires,
+      // optional PDF report links
+      gcpReportStorageUrl,
+      gcpReportSignedUrl,
+      gcpReportSignedUrlExpires,
       errorMessage,
       // optional scanner metadata
       scannerType,
@@ -56,6 +60,10 @@ export async function POST(request: NextRequest) {
       const normalizedSummary = resultsSummary || summary || null;
       const normalizedSignedUrl = gcpSignedUrl || null;
       const normalizedSignedUrlExpires = gcpSignedUrlExpires || null;
+      const normalizedReportUrl = gcpReportStorageUrl || null;
+      const normalizedReportSignedUrl = gcpReportSignedUrl || null;
+      const normalizedReportSignedUrlExpires =
+        gcpReportSignedUrlExpires || null;
 
       // Merge the update into the user's scan doc (create if missing)
       await userScanRef.set(
@@ -64,9 +72,12 @@ export async function POST(request: NextRequest) {
           endTime: now,
           resultsSummary: normalizedSummary,
           gcpStorageUrl: normalizedGcsUrl,
-          // store worker-provided signed url and its expiry if present
+          // store worker-provided signed urls and their expiry if present
           gcpSignedUrl: normalizedSignedUrl,
           gcpSignedUrlExpires: normalizedSignedUrlExpires,
+          gcpReportStorageUrl: normalizedReportUrl,
+          gcpReportSignedUrl: normalizedReportSignedUrl,
+          gcpReportSignedUrlExpires: normalizedReportSignedUrlExpires,
           errorMessage: errorMessage || null,
           // scanner metadata for usage/billing
           scannerType: scannerType || null,
@@ -85,9 +96,12 @@ export async function POST(request: NextRequest) {
           status: normalizedStatus,
           resultsSummary: normalizedSummary,
           gcpStorageUrl: normalizedGcsUrl,
-          // store signed url on global doc too for convenience (may expire)
+          // store signed urls on global doc too for convenience (may expire)
           gcpSignedUrl: normalizedSignedUrl,
           gcpSignedUrlExpires: normalizedSignedUrlExpires,
+          gcpReportStorageUrl: normalizedReportUrl,
+          gcpReportSignedUrl: normalizedReportSignedUrl,
+          gcpReportSignedUrlExpires: normalizedReportSignedUrlExpires,
           errorMessage: errorMessage || null,
           scannerType: scannerType || null,
           billingUnits: typeof billingUnits === "number" ? billingUnits : null,

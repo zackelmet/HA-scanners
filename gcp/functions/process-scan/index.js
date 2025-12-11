@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const { Storage } = require("@google-cloud/storage");
+const PDFDocument = require("pdfkit");
 const fetch = require("node-fetch");
 
 const app = express();
@@ -80,41 +81,112 @@ app.post("/process", async (req, res) => {
       };
     }
 
-    const destPath = `scan-results/${userId}/${scanId}.json`;
-    const file = storage.bucket(BUCKET).file(destPath);
-    // Persist the runnerResult (include metadata)
-    await file.save(JSON.stringify(runnerResult), {
+    const destBase = `scan-results/${userId}/${scanId}`;
+    const jsonPath = `${destBase}.json`;
+    const pdfPath = `${destBase}.pdf`;
+    const bucket = storage.bucket(BUCKET);
+
+    // Persist the runnerResult (include metadata) as pretty JSON
+    await bucket.file(jsonPath).save(JSON.stringify(runnerResult, null, 2), {
       contentType: "application/json",
     });
 
-    // Create a signed URL valid for 7 days so the dashboard can link directly
-    // to the results file without making the bucket public.
-    let signedUrl = null;
+    // Generate a simple PDF summary report
+    try {
+      const doc = new PDFDocument({ margin: 40 });
+      const chunks = [];
+      doc.on("data", (chunk) => chunks.push(chunk));
+
+      const summary = runnerResult.resultsSummary || {};
+      const findings = Array.isArray(summary.findings) ? summary.findings : [];
+
+      doc.fontSize(18).text("Scan Report", { underline: true });
+      doc.moveDown();
+      doc.fontSize(12).text(`Scan ID: ${scanId}`);
+      doc.text(`User ID: ${userId}`);
+      doc.text(`Scanner: ${runnerResult.scannerType || scannerType}`);
+      doc.text(`Target: ${job.target || "n/a"}`);
+      doc.text(`Status: ${runnerResult.status || "completed"}`);
+      doc.moveDown();
+
+      doc.fontSize(14).text("Summary", { underline: true });
+      doc.fontSize(12);
+      doc.text(`Total hosts: ${summary.totalHosts ?? "-"}`);
+      doc.text(`Hosts up: ${summary.hostsUp ?? "-"}`);
+      doc.text(`Open ports: ${summary.openPorts ?? "-"}`);
+      const v = summary.vulnerabilities || {};
+      doc.text(
+        `Vulnerabilities (C/H/M/L): ${v.critical ?? 0}/${v.high ?? 0}/${v.medium ?? 0}/${v.low ?? 0}`,
+      );
+      if (summary.summaryText) doc.text(`Summary: ${summary.summaryText}`);
+      doc.moveDown();
+
+      doc.fontSize(14).text("Findings", { underline: true });
+      doc.fontSize(12);
+      if (findings.length === 0) {
+        doc.text("No findings.");
+      } else {
+        findings.slice(0, 50).forEach((f, idx) => {
+          doc.text(`${idx + 1}. ${f.title || f.id || "Finding"}`);
+          if (f.description) doc.text(`   ${f.description}`);
+          if (f.severity) doc.text(`   Severity: ${f.severity}`);
+          doc.moveDown(0.5);
+        });
+        if (findings.length > 50) {
+          doc.text(`(Truncated to 50 of ${findings.length} findings)`);
+        }
+      }
+
+      doc.end();
+      const pdfBuffer = await new Promise((resolve, reject) => {
+        doc.on("end", () => resolve(Buffer.concat(chunks)));
+        doc.on("error", reject);
+      });
+
+      await bucket.file(pdfPath).save(pdfBuffer, {
+        contentType: "application/pdf",
+      });
+    } catch (err) {
+      console.warn("Failed to generate PDF report:", err);
+    }
+
+    // Create signed URLs valid for 7 days so the dashboard can link directly
+    let signedJsonUrl = null;
+    let signedPdfUrl = null;
     let signedUrlExpires = null;
     try {
       const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
       const expiresAt = new Date(Date.now() + sevenDaysMs);
-      const [url] = await storage
-        .bucket(BUCKET)
-        .file(destPath)
+      const [jsonUrl] = await bucket
+        .file(jsonPath)
         .getSignedUrl({ action: "read", expires: expiresAt });
-      signedUrl = url;
+      signedJsonUrl = jsonUrl;
+
+      const [pdfUrl] = await bucket
+        .file(pdfPath)
+        .getSignedUrl({ action: "read", expires: expiresAt });
+      signedPdfUrl = pdfUrl;
+
       signedUrlExpires = expiresAt.toISOString();
     } catch (err) {
-      console.warn("Failed to create signed URL for scan result:", err);
+      console.warn("Failed to create signed URLs for scan artifacts:", err);
     }
 
     // Notify the SaaS webhook with metadata and log response for debugging
     if (WEBHOOK_URL) {
       try {
-        const gcsUrl = `gs://${BUCKET}/${destPath}`;
+        const gcsUrl = `gs://${BUCKET}/${jsonPath}`;
+        const gcsPdfUrl = `gs://${BUCKET}/${pdfPath}`;
 
         const payload = {
           scanId: runnerResult.scanId || scanId,
           userId: runnerResult.userId || userId,
           gcpStorageUrl: gcsUrl,
-          gcpSignedUrl: signedUrl,
+          gcpSignedUrl: signedJsonUrl,
           gcpSignedUrlExpires: signedUrlExpires,
+          gcpReportStorageUrl: gcsPdfUrl,
+          gcpReportSignedUrl: signedPdfUrl,
+          gcpReportSignedUrlExpires: signedUrlExpires,
           resultsSummary: runnerResult.resultsSummary,
           status: runnerResult.status || "completed",
           // include scanner metadata for the SaaS to persist and bill
