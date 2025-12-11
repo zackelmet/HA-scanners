@@ -129,7 +129,6 @@ module.exports.run = async function run(job) {
     totalPorts: findings.length,
     openPorts,
     vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0 },
-    scanDuration: durationSeconds,
     summaryText: `nmap scan for ${target}`,
     findings,
     optionsUsed: options,

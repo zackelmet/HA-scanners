@@ -13,7 +13,6 @@ module.exports.run = async function run(job) {
     totalPorts: 0,
     openPorts: 0,
     vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0 },
-    scanDuration: 1,
     summaryText: `nikto placeholder scan for ${job.target}`,
     findings: [],
   };

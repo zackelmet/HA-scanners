@@ -69,7 +69,6 @@ app.post("/process", async (req, res) => {
           totalPorts: 0,
           openPorts: 0,
           vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0 },
-          scanDuration: 0,
           summaryText: `placeholder scan for ${job.target}`,
           findings: [],
         },

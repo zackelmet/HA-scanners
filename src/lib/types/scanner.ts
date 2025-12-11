@@ -1,7 +1,12 @@
 import { Timestamp } from "firebase/firestore";
 
 export type ScanType = "nmap" | "openvas";
-export type ScanStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
+export type ScanStatus =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
 export type VulnerabilitySeverity = "low" | "medium" | "high" | "critical";
 
 export interface Scan {
@@ -95,7 +100,6 @@ export interface ScanSummary {
     medium: number;
     low: number;
   };
-  scanDuration: number; // in seconds
 }
 
 export interface CreateScanRequest {

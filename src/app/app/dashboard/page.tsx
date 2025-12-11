@@ -48,11 +48,6 @@ export default function DashboardPage() {
   };
 
   const computeDurationSeconds = (scan: any) => {
-    const rsDuration = scan?.resultsSummary?.scanDuration;
-    if (typeof rsDuration === "number" && rsDuration > 0) {
-      return `${Math.max(1, Math.round(rsDuration))}s`;
-    }
-
     const start = scan?.startTime;
     const end = scan?.endTime;
     if (!start || !end) return "-";
@@ -77,8 +72,6 @@ export default function DashboardPage() {
     if (rs.summaryText) parts.push(rs.summaryText);
     if (rs.totalHosts !== undefined) parts.push(`${rs.totalHosts} hosts`);
     if (rs.openPorts !== undefined) parts.push(`${rs.openPorts} open ports`);
-    if (typeof rs.scanDuration === "number" && rs.scanDuration > 0)
-      parts.push(`~${Math.max(1, Math.round(rs.scanDuration))}s`);
 
     if (rs.vulnerabilities) {
       const v = rs.vulnerabilities;

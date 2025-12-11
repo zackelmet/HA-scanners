@@ -89,7 +89,6 @@ module.exports.run = async function run(job) {
         medium: 0,
         low: 0,
       },
-    scanDuration: durationSeconds,
     summaryText:
       payload.summaryText ||
       payload.resultsSummary?.summaryText ||
