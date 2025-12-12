@@ -21,7 +21,10 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("history");
   const [scannerType, setScannerType] = useState<"nmap" | "openvas">("nmap");
   const [targetInput, setTargetInput] = useState("");
-  const [optionsInput, setOptionsInput] = useState("");
+  const [serviceDetection, setServiceDetection] = useState(true);
+  const [osDetection, setOsDetection] = useState(false);
+  const [defaultScripts, setDefaultScripts] = useState(false);
+  const [skipHostDiscovery, setSkipHostDiscovery] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
@@ -270,6 +273,14 @@ export default function DashboardPage() {
 
                       const token = await user.getIdToken(true);
 
+                      const nmapOptions = {
+                        topPorts: 100,
+                        serviceDetection,
+                        osDetection,
+                        defaultScripts,
+                        skipHostDiscovery,
+                      };
+
                       const res = await fetch("/api/scans", {
                         method: "POST",
                         headers: {
@@ -279,7 +290,7 @@ export default function DashboardPage() {
                         body: JSON.stringify({
                           type: scannerType,
                           target: targetInput,
-                          options: optionsInput,
+                          options: scannerType === "nmap" ? nmapOptions : {},
                         }),
                       });
 
@@ -291,7 +302,6 @@ export default function DashboardPage() {
                           `Scan queued: ${data.scanId || "queued"}`,
                         );
                         setTargetInput("");
-                        setOptionsInput("");
                         setActiveTab("history");
                       }
                     } catch (err: any) {
@@ -334,18 +344,69 @@ export default function DashboardPage() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold mb-2 text-[var(--text)]">
-                        Scan Options
-                      </label>
-                      <textarea
-                        className="neon-input w-full py-3"
-                        placeholder="Additional scan parameters (optional)"
-                        rows={3}
-                        value={optionsInput}
-                        onChange={(e) => setOptionsInput(e.target.value)}
-                      />
-                    </div>
+                    {scannerType === "nmap" && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-semibold text-[var(--text)]">
+                              Top ports
+                            </div>
+                            <div className="text-xs neon-subtle">
+                              Fixed at top 100 ports for faster runs
+                            </div>
+                          </div>
+                          <div className="neon-chip">100</div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              className="accent-[var(--primary)]"
+                              checked={serviceDetection}
+                              onChange={(e) =>
+                                setServiceDetection(e.target.checked)
+                              }
+                            />
+                            Service detection (-sV)
+                          </label>
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              className="accent-[var(--primary)]"
+                              checked={defaultScripts}
+                              onChange={(e) =>
+                                setDefaultScripts(e.target.checked)
+                              }
+                            />
+                            Default scripts (-sC)
+                          </label>
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              className="accent-[var(--primary)]"
+                              checked={osDetection}
+                              onChange={(e) => setOsDetection(e.target.checked)}
+                            />
+                            OS detection (-O)
+                          </label>
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              className="accent-[var(--primary)]"
+                              checked={skipHostDiscovery}
+                              onChange={(e) =>
+                                setSkipHostDiscovery(e.target.checked)
+                              }
+                            />
+                            Skip host discovery (-Pn)
+                          </label>
+                        </div>
+                        <div className="text-xs neon-subtle">
+                          Nmap scans are capped to top 100 ports; toggle extra
+                          probes as needed.
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex justify-end pt-2">
                       <button

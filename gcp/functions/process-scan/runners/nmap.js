@@ -73,18 +73,28 @@ module.exports.run = async function run(job) {
   // Build a safe argument list — only allow a limited set of flags to prevent injection.
   const nmapBinary = process.env.NMAP_PATH || "nmap";
   const timeoutMs = Number(process.env.NMAP_TIMEOUT_MS || 240000);
-  const args = ["-oX", "-", "-T4", "-sT", "-p", "22,80,443", "-Pn", target];
 
-  // Optional: allow top-ports and specific ports, sanitized to numbers/commas
-  if (options.topPorts) {
-    const top = Number(options.topPorts);
-    if (Number.isFinite(top) && top > 0 && top <= 10000) {
-      args.push("--top-ports", String(top));
-    }
+  // Defaults: top 100 ports, TCP connect scan, moderate timing.
+  const topPorts = (() => {
+    const top = Number(options.topPorts ?? 100);
+    if (!Number.isFinite(top) || top <= 0 || top > 10000) return 100;
+    return top;
+  })();
+
+  const args = ["-oX", "-", "-T4", "-sT", "--top-ports", String(topPorts)];
+
+  // Optional toggles from the UI (whitelisted only)
+  if (options.serviceDetection) args.push("-sV");
+  if (options.defaultScripts) args.push("-sC");
+  if (options.osDetection) args.push("-O");
+
+  // Skip host discovery by default unless explicitly disabled
+  if (options.skipHostDiscovery !== false) {
+    args.push("-Pn");
   }
 
+  // Optional explicit ports override top-ports if provided and safe
   if (options.ports) {
-    // Allow a comma-separated list of ports (digits only) to avoid shell injection
     const safePorts = String(options.ports)
       .split(",")
       .map((p) => p.trim())
@@ -94,6 +104,8 @@ module.exports.run = async function run(job) {
       args.push("-p", safePorts);
     }
   }
+
+  args.push(target);
 
   const startedAt = Date.now();
   let stdout = "";
