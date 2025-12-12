@@ -19,9 +19,7 @@ type TabKey = "newScan" | "history";
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("history");
-  const [scannerType, setScannerType] = useState<"nmap" | "openvas" | "nikto">(
-    "nmap",
-  );
+  const [scannerType, setScannerType] = useState<"nmap" | "openvas">("nmap");
   const [targetInput, setTargetInput] = useState("");
   const [optionsInput, setOptionsInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -312,16 +310,13 @@ export default function DashboardPage() {
                         className="neon-input w-full py-3"
                         value={scannerType}
                         onChange={(e) =>
-                          setScannerType(
-                            e.target.value as "nmap" | "openvas" | "nikto",
-                          )
+                          setScannerType(e.target.value as "nmap" | "openvas")
                         }
                       >
                         <option value="nmap">Nmap - Network Scanner</option>
                         <option value="openvas">
                           OpenVAS - Vulnerability Assessment
                         </option>
-                        <option value="nikto">Nikto - Web Scanner</option>
                       </select>
                     </div>
 
