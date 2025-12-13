@@ -5,6 +5,18 @@ What it does
 - Persists runner result JSON to `gs://$GCP_BUCKET_NAME/scan-results/{userId}/{scanId}.json`.
 - Posts metadata (and signed URL when available) to `$VERCEL_WEBHOOK_URL` with `x-gcp-webhook-secret` header.
 
+OpenVAS runner
+- Requires an external wrapper binary/script that runs OpenVAS/GVM and prints JSON to stdout.
+- Set `OPENVAS_CMD` to that wrapper (e.g., `/usr/local/bin/openvas-wrapper`).
+- Optional: `OPENVAS_TIMEOUT_MS` (default 900000 ms / 15m).
+- For smoke testing without OpenVAS installed, set `OPENVAS_USE_MOCK=1` (uses `runners/openvas-mock.js`).
+
+Standalone OpenVAS Cloud Run (recommended)
+- See `gcp/openvas-runner/` for a dedicated container based on `greenbone/openvas-scanner` with an HTTP wrapper at `/process`.
+- Build/push: `gcloud builds submit --tag gcr.io/hosted-scanners/openvas-runner gcp/openvas-runner`
+- Deploy: `gcloud run deploy openvas-runner --image gcr.io/hosted-scanners/openvas-runner --region=us-central1 --allow-unauthenticated --timeout=900`
+- Env flags: `OPENVAS_CMD` (set to your real invocation), `OPENVAS_USE_MOCK=1` for mock responses while wiring.
+
 Runners
 - `nmap`: Executes `nmap -oX - -T4 -sV` (with optional `options.topPorts` or `options.ports`) and parses XML to findings.
 - `openvas`: Runs inline via `$OPENVAS_CMD` (e.g., Python wrapper around gvm-cli) that must emit JSON to stdout. Runner writes JSON to `scan-results/{userId}/{scanId}.json` and normalizes it.

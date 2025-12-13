@@ -1,5 +1,6 @@
 const { execFile } = require("child_process");
 const { promisify } = require("util");
+const path = require("path");
 const { Storage } = require("@google-cloud/storage");
 
 // Runner for the OpenVAS scanner. This variant runs OpenVAS inline by invoking
@@ -26,29 +27,67 @@ module.exports.run = async function run(job) {
   }
 
   const cmd = process.env.OPENVAS_CMD || "openvas-wrapper";
+  const useMock = process.env.OPENVAS_USE_MOCK === "1" || cmd === "mock";
   const timeoutMs = Number(process.env.OPENVAS_TIMEOUT_MS || 900000);
 
   let payload = {};
   try {
-    const args = [];
-    // Expect the wrapper to accept JSON via stdin or args; we pass JSON via stdin.
-    const input = JSON.stringify({ scanId, userId, target, options });
+    if (useMock) {
+      payload = {
+        status: "completed",
+        totalHosts: 1,
+        hostsUp: 1,
+        totalPorts: 3,
+        openPorts: 2,
+        vulnerabilities: { critical: 0, high: 0, medium: 1, low: 1 },
+        summaryText: `Mock OpenVAS scan for ${target}`,
+        findings: [
+          {
+            id: `${target}:443/TLS`,
+            severity: "medium",
+            title: "Mock TLS finding",
+            description: "Example mock vulnerability for smoke testing",
+          },
+          {
+            id: `${target}:80/HTTP`,
+            severity: "low",
+            title: "Mock HTTP finding",
+            description: "Example informational finding",
+          },
+        ],
+        rawOutput: { mock: true },
+      };
+    } else {
+      const args = [];
+      // Expect the wrapper to accept JSON via stdin or args; we pass JSON via stdin.
+      const input = JSON.stringify({ scanId, userId, target, options });
 
-    const { stdout, stderr } = await execFileAsync(cmd, args, {
-      timeout: timeoutMs,
-      maxBuffer: 20 * 1024 * 1024,
-      input,
-      env: { ...process.env },
-    });
+      const { stdout, stderr } = await execFileAsync(cmd, args, {
+        timeout: timeoutMs,
+        maxBuffer: 20 * 1024 * 1024,
+        input,
+        env: { ...process.env },
+      });
 
-    try {
-      payload = stdout ? JSON.parse(stdout) : {};
-    } catch (err) {
-      throw new Error(
-        `OpenVAS wrapper returned non-JSON stdout. stderr: ${stderr || ""}`,
-      );
+      if (!stdout) {
+        throw new Error(
+          `OpenVAS wrapper returned empty stdout. stderr: ${stderr || ""}`,
+        );
+      }
+
+      try {
+        payload = JSON.parse(stdout);
+      } catch (err) {
+        throw new Error(
+          `OpenVAS wrapper returned non-JSON stdout. stderr: ${stderr || ""}`,
+        );
+      }
     }
   } catch (err) {
+    const baseError =
+      err && err.code === "ENOENT"
+        ? `OpenVAS wrapper not found: ${cmd}. Set OPENVAS_CMD to your wrapper binary.`
+        : err.message || "OpenVAS runner failed";
     return {
       status: "failed",
       scanId,
@@ -57,7 +96,7 @@ module.exports.run = async function run(job) {
       rawOutput: null,
       billingUnits: 0,
       scannerType: "openvas",
-      errorMessage: err.message || "OpenVAS runner failed",
+      errorMessage: baseError,
     };
   }
 
@@ -77,24 +116,27 @@ module.exports.run = async function run(job) {
   const durationSeconds =
     Number(payload.durationSeconds || payload.scanDuration || 0) || null;
 
+  const summarySource = payload.resultsSummary || payload;
+
   const resultsSummary = {
-    totalHosts: payload.totalHosts || 1,
-    hostsUp: payload.hostsUp || 1,
-    totalPorts: payload.totalPorts || payload.openPorts || 0,
-    openPorts: payload.openPorts || 0,
-    vulnerabilities: payload.vulnerabilities ||
-      payload.resultsSummary?.vulnerabilities || {
+    totalHosts: summarySource.totalHosts || 1,
+    hostsUp: summarySource.hostsUp || 1,
+    totalPorts: summarySource.totalPorts || summarySource.openPorts || 0,
+    openPorts: summarySource.openPorts || 0,
+    vulnerabilities: summarySource.vulnerabilities ||
+      summarySource.resultsSummary?.vulnerabilities || {
         critical: 0,
         high: 0,
         medium: 0,
         low: 0,
       },
     summaryText:
-      payload.summaryText ||
-      payload.resultsSummary?.summaryText ||
+      summarySource.summaryText ||
+      summarySource.resultsSummary?.summaryText ||
       `OpenVAS scan for ${target}`,
-    findings: normalizeFindings(payload),
+    findings: normalizeFindings(summarySource),
     optionsUsed: options,
+    durationSeconds,
   };
 
   const billingUnits =
