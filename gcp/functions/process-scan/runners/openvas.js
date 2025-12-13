@@ -26,6 +26,7 @@ module.exports.run = async function run(job) {
     throw new Error("Target is required for OpenVAS scans");
   }
 
+  const httpUrl = process.env.OPENVAS_HTTP_URL;
   const cmd = process.env.OPENVAS_CMD || "openvas-wrapper";
   const useMock = process.env.OPENVAS_USE_MOCK === "1" || cmd === "mock";
   const timeoutMs = Number(process.env.OPENVAS_TIMEOUT_MS || 900000);
@@ -57,6 +58,21 @@ module.exports.run = async function run(job) {
         ],
         rawOutput: { mock: true },
       };
+    } else if (httpUrl) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      const resp = await fetch(httpUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanId, userId, target, options }),
+        signal: controller.signal,
+      });
+      clearTimeout(id);
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(`OpenVAS HTTP runner failed: ${resp.status} ${text}`);
+      }
+      payload = await resp.json();
     } else {
       const args = [];
       // Expect the wrapper to accept JSON via stdin or args; we pass JSON via stdin.

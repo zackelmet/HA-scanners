@@ -6,8 +6,8 @@ What it does
 - Posts metadata (and signed URL when available) to `$VERCEL_WEBHOOK_URL` with `x-gcp-webhook-secret` header.
 
 OpenVAS runner
-- Requires an external wrapper binary/script that runs OpenVAS/GVM and prints JSON to stdout.
-- Set `OPENVAS_CMD` to that wrapper (e.g., `/usr/local/bin/openvas-wrapper`).
+- Option 1 (local binary): set `OPENVAS_CMD` to a wrapper (e.g., `/usr/local/bin/openvas-wrapper`) that runs OpenVAS/GVM and prints JSON to stdout.
+- Option 2 (remote service): set `OPENVAS_HTTP_URL` to a deployed OpenVAS runner (e.g., the dedicated Cloud Run service below); the worker will POST `{ scanId, userId, target, options }` and expect JSON.
 - Optional: `OPENVAS_TIMEOUT_MS` (default 900000 ms / 15m).
 - For smoke testing without OpenVAS installed, set `OPENVAS_USE_MOCK=1` (uses `runners/openvas-mock.js`).
 
@@ -15,7 +15,8 @@ Standalone OpenVAS Cloud Run (recommended)
 - See `gcp/openvas-runner/` for a dedicated container based on `greenbone/openvas-scanner` with an HTTP wrapper at `/process`.
 - Build/push: `gcloud builds submit --tag gcr.io/hosted-scanners/openvas-runner gcp/openvas-runner`
 - Deploy: `gcloud run deploy openvas-runner --image gcr.io/hosted-scanners/openvas-runner --region=us-central1 --allow-unauthenticated --timeout=900`
-- Env flags: `OPENVAS_CMD` (set to your real invocation), `OPENVAS_USE_MOCK=1` for mock responses while wiring.
+- Env flags: `OPENVAS_USERNAME`, `OPENVAS_PASSWORD`, optional `OPENVAS_HOST`/`OPENVAS_PORT` (default `127.0.0.1:9390` inside container), `OPENVAS_CONFIG_ID` (default Full+Fast), `OPENVAS_USE_MOCK=1` for mock responses while wiring.
+- Point the worker to it with `OPENVAS_HTTP_URL=https://openvas-runner-...run.app/process`.
 
 Runners
 - `nmap`: Executes `nmap -oX - -T4 -sV` (with optional `options.topPorts` or `options.ports`) and parses XML to findings.

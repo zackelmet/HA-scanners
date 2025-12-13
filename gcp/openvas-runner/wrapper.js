@@ -9,8 +9,7 @@ const { promisify } = require("util");
 const execFileAsync = promisify(execFile);
 
 const PORT = process.env.PORT || 8080;
-const CMD = process.env.OPENVAS_CMD || "gvm-cli"; // override to your command
-const CMD_ARGS = process.env.OPENVAS_CMD_ARGS || ""; // optional extra args
+const USE_MOCK = process.env.OPENVAS_USE_MOCK === "1";
 const TIMEOUT_MS = Number(process.env.OPENVAS_TIMEOUT_MS || 900000);
 
 function parseJson(req) {
@@ -47,12 +46,7 @@ async function runScan(job) {
   const { scanId, userId, target, options = {} } = job;
   if (!target) throw new Error("target is required");
 
-  // TODO: replace with your actual OpenVAS invocation.
-  // Example for gvm-cli (adjust creds/host/port):
-  // const args = ["--gmp-tls", "--hostname", "127.0.0.1", "--port", "9390", "--username", "admin", "--password", process.env.OPENVAS_PASSWORD, "--xml", `<create_target>...</create_target>`];
-  // Here we just mock to keep the wrapper deployable; replace the block below.
-
-  if (process.env.OPENVAS_USE_MOCK === "1") {
+  if (USE_MOCK) {
     return {
       status: "completed",
       totalHosts: 1,
@@ -79,11 +73,40 @@ async function runScan(job) {
     };
   }
 
-  // Real invocation placeholder: replace this with your gvm-cli/ospd-openvas command and XML/GMP payload
-  // Fail if not configured
-  throw new Error(
-    "OPENVAS_CMD not configured with a real invocation; set OPENVAS_USE_MOCK=1 to smoke test",
+  const pythonPath = process.env.OPENVAS_PYTHON || "python3";
+  const scriptPath = process.env.OPENVAS_SCAN_SCRIPT || "/app/openvas_scan.py";
+
+  const { stdout, stderr } = await execFileAsync(
+    pythonPath,
+    ["-u", scriptPath],
+    {
+      timeout: TIMEOUT_MS,
+      maxBuffer: 20 * 1024 * 1024,
+      input: JSON.stringify({ scanId, userId, target, options }),
+      env: { ...process.env },
+    },
   );
+
+  if (!stdout) {
+    throw new Error(
+      `OpenVAS scan script returned empty stdout. stderr: ${stderr || ""}`,
+    );
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(stdout);
+  } catch (err) {
+    throw new Error(
+      `OpenVAS scan script returned non-JSON stdout. stderr: ${stderr || ""}`,
+    );
+  }
+
+  if (payload.error) {
+    throw new Error(payload.error);
+  }
+
+  return payload;
 }
 
 http
@@ -121,6 +144,7 @@ http
           `OpenVAS scan for ${job.target}`,
         findings: normalizeFindings(summarySource),
         optionsUsed: job.options || {},
+        durationSeconds: summarySource.durationSeconds,
       };
 
       const response = {
