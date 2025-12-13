@@ -1,6 +1,6 @@
 # OpenVAS runner container
-# Pin platform to amd64 and pull from Docker Hub (registry-1) which carries amd64 builds
-FROM --platform=linux/amd64 registry-1.docker.io/greenbone/openvas-scanner:stable
+# Use an amd64-friendly OpenVAS image to avoid arm64-only tags in GHCR/Docker Hub
+FROM --platform=linux/amd64 immauss/openvas:latest
 
 # Install tools required for the Node wrapper and gvm-cli/python bindings
 RUN apt-get update && apt-get install -y --no-install-recommends \
