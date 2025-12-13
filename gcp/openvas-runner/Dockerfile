@@ -1,5 +1,6 @@
 # OpenVAS runner container
-FROM greenbone/openvas-scanner:stable
+# Use GHCR source to avoid Docker Hub pull limits
+FROM ghcr.io/greenbone/openvas-scanner:stable
 
 # Install tools required for the Node wrapper and gvm-cli/python bindings
 RUN apt-get update && apt-get install -y --no-install-recommends \
