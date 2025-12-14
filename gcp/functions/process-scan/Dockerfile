@@ -2,7 +2,7 @@ FROM node:20-slim
 
 # Install system dependencies for scanners (nmap) and certs for outbound HTTPS
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends nmap ca-certificates \
+	&& apt-get install -y --no-install-recommends nmap nikto ca-certificates \
 	&& rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app

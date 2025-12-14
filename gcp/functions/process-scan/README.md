@@ -7,6 +7,7 @@ What it does
 
 Runners
 - `nmap`: Executes `nmap -oX - -T4 -sV` (with optional `options.topPorts` or `options.ports`) and parses XML to findings.
+- `nikto`: Runs `nikto -h <target> -Format json -o -` (timeout `NIKTO_TIMEOUT_MS`, default 300s). Optional `options.ssl=true` adds `-ssl`. Installs nikto in the container.
 - `openvas`: Runs inline via `$OPENVAS_CMD` (e.g., Python wrapper around gvm-cli) that must emit JSON to stdout. Runner writes JSON to `scan-results/{userId}/{scanId}.json` and normalizes it.
 - Default fallback returns a placeholder result if a runner is missing.
 
@@ -18,6 +19,7 @@ Required env
 Optional env
 - `GCP_PROJECT_ID`, `GCP_FUNCTION_URL`/`GCP_CLOUD_RUN_URL` (worker URL used by the SaaS to POST jobs directly).
 - `NMAP_PATH` (default `nmap`), `NMAP_TIMEOUT_MS` (default 240000).
+- `NIKTO_PATH` (default `nikto`), `NIKTO_TIMEOUT_MS` (default 300000).
 - `OPENVAS_CMD` (default `openvas-wrapper`), `OPENVAS_TIMEOUT_MS` (default 900000).
 
 Local dev
