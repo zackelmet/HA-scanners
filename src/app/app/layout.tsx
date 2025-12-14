@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Hacker Analytics - Hosted Security Scanners",
   description:
-    "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and OpenVAS services on fast, optimized servers.",
+    "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and Nikto services on fast, optimized servers.",
 };
 
 export default function AppLayout({

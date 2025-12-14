@@ -8,14 +8,15 @@ export default function HeroSection() {
         <h1 className="font-extrabold text-5xl lg:text-7xl tracking-tight flex flex-col gap-2 items-center">
           <span className="text-base-content">Hosted Security Scanners</span>
         </h1>
-        
+
         <h2 className="text-2xl lg:text-3xl font-bold text-primary">
           Vulnerability Scanning: Zero Install. Maximum Impact.
         </h2>
 
         <p className="text-lg lg:text-xl opacity-80 leading-relaxed max-w-3xl">
-          Simplify your security workflow. Our hosted Nmap and OpenVAS services run on fast, 
-          optimized servers with no installation or maintenance required.
+          Simplify your security workflow. Our hosted Nmap and Nikto services
+          run on fast, optimized servers with no installation or maintenance
+          required.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 mt-4">

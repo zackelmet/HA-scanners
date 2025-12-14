@@ -34,7 +34,7 @@ export interface UserDocument {
   // Feature Access Flags (for future use)
   features?: {
     nmapEnabled: boolean;
-    openvasEnabled: boolean;
+    niktoEnabled: boolean;
     apiAccess: boolean;
     customReports: boolean;
     prioritySupport: boolean;
@@ -51,7 +51,7 @@ export interface UserDocument {
 
 export interface ScanMetadata {
   scanId: string;
-  type: "nmap" | "openvas";
+  type: "nmap" | "nikto";
   target: string;
   status: "queued" | "running" | "completed" | "failed";
   startTime: Timestamp;
@@ -72,7 +72,7 @@ export const PLAN_LIMITS = {
     monthlyScans: 0, // Free users can't scan
     features: {
       nmapEnabled: false,
-      openvasEnabled: false,
+      niktoEnabled: false,
       apiAccess: false,
       customReports: false,
       prioritySupport: false,
@@ -83,7 +83,7 @@ export const PLAN_LIMITS = {
     monthlyScans: 500,
     features: {
       nmapEnabled: true,
-      openvasEnabled: false,
+      niktoEnabled: true,
       apiAccess: false,
       customReports: false,
       prioritySupport: false,
@@ -94,7 +94,7 @@ export const PLAN_LIMITS = {
     monthlyScans: 2500,
     features: {
       nmapEnabled: true,
-      openvasEnabled: true,
+      niktoEnabled: true,
       apiAccess: true,
       customReports: true,
       prioritySupport: false,
@@ -105,7 +105,7 @@ export const PLAN_LIMITS = {
     monthlyScans: 10000,
     features: {
       nmapEnabled: true,
-      openvasEnabled: true,
+      niktoEnabled: true,
       apiAccess: true,
       customReports: true,
       prioritySupport: true,

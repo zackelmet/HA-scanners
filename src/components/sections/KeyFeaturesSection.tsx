@@ -26,7 +26,7 @@ export default function KeyFeaturesSection() {
       icon: faChartLine,
       title: "Advanced Vulnerability Management",
       description:
-        "Gain continuous oversight of your security posture. Easily schedule industry-leading tools like OpenVAS and Nmap for ongoing vulnerability detection and proactive firewall monitoring.",
+        "Gain continuous oversight of your security posture. Easily schedule industry-leading tools like Nmap and Nikto for ongoing vulnerability detection and proactive firewall monitoring.",
       badge: "Vulnerability management",
     },
     {

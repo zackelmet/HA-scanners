@@ -147,7 +147,7 @@ export default function AuthForm() {
             </p>
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start text-sm text-[var(--text-muted)]">
               <span className="neon-chip">Hosted Nmap</span>
-              <span className="neon-chip">OpenVAS findings</span>
+              <span className="neon-chip">Nikto findings</span>
               <span className="neon-chip">SOC2-ready controls</span>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 
-export type ScanType = "nmap" | "openvas" | "nikto";
+export type ScanType = "nmap" | "nikto";
 export type ScanStatus =
   | "queued"
   | "running"
@@ -15,7 +15,7 @@ export interface Scan {
   type: ScanType;
   status: ScanStatus;
   target: string;
-  options: NmapOptions | OpenVASOptions;
+  options: NmapOptions | NiktoOptions;
   createdAt: Timestamp;
   startedAt?: Timestamp;
   completedAt?: Timestamp;
@@ -28,15 +28,6 @@ export interface NmapOptions {
   ports?: string;
   timing?: "T0" | "T1" | "T2" | "T3" | "T4" | "T5";
   customFlags?: string;
-}
-
-export interface OpenVASOptions {
-  scanProfile: "discovery" | "full" | "web" | "system" | "custom";
-  portRange?: string;
-  targetCredentials?: {
-    username?: string;
-    password?: string;
-  };
 }
 
 export interface NiktoOptions {
@@ -109,7 +100,7 @@ export interface ScanSummary {
 export interface CreateScanRequest {
   type: ScanType;
   target: string;
-  options: NmapOptions | OpenVASOptions | NiktoOptions;
+  options: NmapOptions | NiktoOptions;
 }
 
 export interface ScanQueue {

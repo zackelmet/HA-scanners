@@ -19,7 +19,7 @@ type TabKey = "newScan" | "history";
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("history");
-  const [scannerType, setScannerType] = useState<"nmap" | "openvas">("nmap");
+  const [scannerType, setScannerType] = useState<"nmap" | "nikto">("nmap");
   const [targetInput, setTargetInput] = useState("");
   const [serviceDetection, setServiceDetection] = useState(true);
   const [osDetection, setOsDetection] = useState(false);
@@ -146,7 +146,7 @@ export default function DashboardPage() {
               </h1>
               <p className="text-base neon-subtle">
                 Launch and manage your vulnerability scans with hosted Nmap and
-                OpenVAS.
+                Nikto.
               </p>
             </div>
             <Link
@@ -167,7 +167,7 @@ export default function DashboardPage() {
               <div className="flex-1 space-y-1">
                 <h3 className="font-bold text-xl">Upgrade to Start Scanning</h3>
                 <p className="text-sm neon-subtle">
-                  Subscribe to unlock hosted Nmap and OpenVAS scanning. Starting
+                  Subscribe to unlock hosted Nmap and Nikto scanning. Starting
                   at $96/year • 7-day money-back guarantee.
                 </p>
               </div>
@@ -320,12 +320,12 @@ export default function DashboardPage() {
                         className="neon-input w-full py-3"
                         value={scannerType}
                         onChange={(e) =>
-                          setScannerType(e.target.value as "nmap" | "openvas")
+                          setScannerType(e.target.value as "nmap" | "nikto")
                         }
                       >
                         <option value="nmap">Nmap - Network Scanner</option>
-                        <option value="openvas">
-                          OpenVAS - Vulnerability Assessment
+                        <option value="nikto">
+                          Nikto - Web Vulnerability Scanner
                         </option>
                       </select>
                     </div>

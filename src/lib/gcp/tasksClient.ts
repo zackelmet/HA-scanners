@@ -1,7 +1,7 @@
 export interface ScanJob {
   scanId: string;
   userId: string;
-  type: "nmap" | "openvas" | "nikto";
+  type: "nmap" | "nikto";
   target: string;
   options?: any;
   callbackUrl: string;

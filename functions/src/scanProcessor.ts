@@ -5,16 +5,58 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
+type NmapOptions = {
+  scanProfile: "quick" | "standard" | "full" | "custom";
+  ports?: string;
+  timing?: "T0" | "T1" | "T2" | "T3" | "T4" | "T5";
+  customFlags?: string;
+};
+
+type HostEntry = {
+  state?: "up" | "down" | "unknown";
+};
+
+type NmapParsed = {
+  hosts: HostEntry[];
+  scanInfo: {
+    type: string;
+    protocol: string;
+    numServices: number;
+    startTime: string;
+    endTime: string;
+  };
+};
+
+type NmapSummary = {
+  totalHosts: number;
+  hostsUp: number;
+  totalPorts: number;
+  openPorts: number;
+  vulnerabilities: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  scanDuration: number;
+};
+
+type NmapResult = {
+  rawOutput: string;
+  parsed: NmapParsed;
+  vulnerabilities: Record<string, unknown>[];
+  summary: NmapSummary;
+};
+
 /**
- * Process scan queue - triggered when a new scan is added to the queue
- * This function would be called by a Cloud Function trigger or a scheduled function
+ * Process scan queue - triggered when a new scan is added to the queue.
+ * Intended for Cloud Function triggers or scheduled execution.
  */
 export const processScanQueue = functions.firestore
   .document("scanQueue/{queueId}")
-  .onCreate(async (snap, context) => {
+  .onCreate(async (snap) => {
     const queueData = snap.data();
     const scanId = queueData.scanId;
-    const queueId = context.params.queueId;
 
     try {
       // Get the scan details
@@ -29,7 +71,7 @@ export const processScanQueue = functions.firestore
       }
 
       const scanData = scanDoc.data();
-      
+
       // Update scan status to running
       await scanDoc.ref.update({
         status: "running",
@@ -37,13 +79,11 @@ export const processScanQueue = functions.firestore
       });
 
       // Execute the scan based on type
-      let result;
+      let result: NmapResult;
       if (scanData?.type === "nmap") {
         result = await executeNmapScan(scanData.target, scanData.options);
-      } else if (scanData?.type === "openvas") {
-        result = await executeOpenVASScan(scanData.target, scanData.options);
       } else {
-        throw new Error(`Unknown scan type: ${scanData?.type}`);
+        throw new Error(`Unsupported scan type: ${scanData?.type}`);
       }
 
       // Store the results
@@ -75,11 +115,15 @@ export const processScanQueue = functions.firestore
       functions.logger.error(`Error processing scan ${scanId}:`, error);
 
       // Update scan status to failed
-      await admin.firestore().collection("scans").doc(scanId).update({
-        status: "failed",
-        completedAt: admin.firestore.FieldValue.serverTimestamp(),
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
+      await admin
+        .firestore()
+        .collection("scans")
+        .doc(scanId)
+        .update({
+          status: "failed",
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
 
       // Remove from queue
       await snap.ref.delete();
@@ -87,17 +131,15 @@ export const processScanQueue = functions.firestore
   });
 
 /**
- * Execute Nmap scan
- * NOTE: This is a simplified example. In production, you should:
- * - Run scans in isolated containers/VMs
- * - Implement proper security controls
- * - Add rate limiting and resource management
- * - Validate targets against allowed networks
+ * Execute an Nmap scan with the provided options.
+ * @param {string} target Host or IP to scan.
+ * @param {NmapOptions} options Nmap options for controlling the scan.
+ * @return {Promise<NmapResult>} Raw output plus parsed and summarized results.
  */
 async function executeNmapScan(
   target: string,
-  options: any
-): Promise<any> {
+  options: NmapOptions,
+): Promise<NmapResult> {
   // Build nmap command based on options
   let nmapCommand = "nmap";
 
@@ -165,64 +207,16 @@ async function executeNmapScan(
 }
 
 /**
- * Execute OpenVAS scan
- * NOTE: This is a placeholder. OpenVAS integration requires:
- * - OpenVAS Manager Protocol (OMP) client
- * - Proper OpenVAS server setup
- * - Authentication and session management
+ * Parse Nmap XML output.
+ * This is a stub; replace with a real XML parser
+ * (for example, fast-xml-parser or xml2js).
+ * @param {string} xmlOutput Raw XML output from Nmap.
+ * @return {NmapParsed} Minimal parsed structure for downstream processing.
  */
-async function executeOpenVASScan(
-  target: string,
-  options: any
-): Promise<any> {
-  // This is a placeholder implementation
-  // In production, you would:
-  // 1. Connect to OpenVAS Manager via OMP
-  // 2. Create a task with the specified target and config
-  // 3. Start the task
-  // 4. Poll for completion
-  // 5. Retrieve and parse results
+function parseNmapOutput(xmlOutput: string): NmapParsed {
+  const _unused = xmlOutput.length; // keep placeholder util lint happy
+  void _unused;
 
-  functions.logger.info(`OpenVAS scan requested for ${target}`);
-
-  // For now, return a mock response
-  return {
-    rawOutput: "OpenVAS scan - Coming soon",
-    parsed: {
-      hosts: [],
-      scanInfo: {
-        type: "openvas",
-        protocol: "tcp",
-        numServices: 0,
-        startTime: new Date().toISOString(),
-        endTime: new Date().toISOString(),
-      },
-    },
-    vulnerabilities: [],
-    summary: {
-      totalHosts: 1,
-      hostsUp: 1,
-      totalPorts: 0,
-      openPorts: 0,
-      vulnerabilities: {
-        critical: 0,
-        high: 0,
-        medium: 0,
-        low: 0,
-      },
-      scanDuration: 0,
-    },
-  };
-}
-
-/**
- * Parse Nmap XML output
- * This is a simplified parser - in production, use a proper XML parser
- */
-function parseNmapOutput(xmlOutput: string): any {
-  // This is a placeholder - implement proper XML parsing
-  // Use libraries like 'fast-xml-parser' or 'xml2js'
-  
   return {
     hosts: [],
     scanInfo: {
@@ -236,25 +230,28 @@ function parseNmapOutput(xmlOutput: string): any {
 }
 
 /**
- * Extract vulnerabilities from Nmap scan results
+ * Extract vulnerabilities from parsed Nmap results.
+ * @param {NmapParsed} parsed Parsed Nmap results.
+ * @return {Record<string, unknown>[]} Array of vulnerability
+ * findings (placeholder).
  */
-function extractVulnerabilitiesFromNmap(parsed: any): any[] {
-  // Analyze scan results and extract potential vulnerabilities
-  // This could include:
-  // - Open ports on sensitive services
-  // - Outdated service versions with known CVEs
-  // - Weak configurations
-  
+function extractVulnerabilitiesFromNmap(
+  parsed: NmapParsed,
+): Record<string, unknown>[] {
+  const _hosts = parsed.hosts.length;
+  void _hosts;
   return [];
 }
 
 /**
- * Generate scan summary
+ * Generate a lightweight summary from parsed Nmap results.
+ * @param {NmapParsed} parsed Parsed Nmap results.
+ * @return {NmapSummary} Aggregated scan summary.
  */
-function generateScanSummary(parsed: any): any {
+function generateScanSummary(parsed: NmapParsed): NmapSummary {
   return {
     totalHosts: parsed.hosts?.length || 0,
-    hostsUp: parsed.hosts?.filter((h: any) => h.state === "up").length || 0,
+    hostsUp: parsed.hosts?.filter((host) => host.state === "up").length || 0,
     totalPorts: 0,
     openPorts: 0,
     vulnerabilities: {

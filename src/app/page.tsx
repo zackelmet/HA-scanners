@@ -24,7 +24,7 @@ export default function Home() {
       priceId: "price_1SWNxX053rHBeqKvAnt0iUYW", // Pro plan
       features: [
         "100 scans per month",
-        "Nmap + OpenVAS scanning",
+        "Nmap + Nikto scanning",
         "Advanced reports",
         "API access",
         "Priority support",
@@ -65,7 +65,7 @@ export default function Home() {
             Choose Your Plan
           </h1>
           <p className="text-lg lg:text-xl neon-subtle max-w-2xl mx-auto">
-            Start protecting your infrastructure with hosted Nmap and OpenVAS.
+            Start protecting your infrastructure with hosted Nmap and Nikto.
             Scale from solo to enterprise without managing scanners.
           </p>
         </div>
