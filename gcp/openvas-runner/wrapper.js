@@ -74,7 +74,8 @@ async function runScan(job) {
   }
 
   const pythonPath = process.env.OPENVAS_PYTHON || "python3";
-  const scriptPath = process.env.OPENVAS_SCAN_SCRIPT || "/app/openvas_scan.py";
+  const scriptPath =
+    process.env.OPENVAS_SCAN_SCRIPT || "/opt/openvas-runner/openvas_scan.py";
 
   const { stdout, stderr } = await execFileAsync(
     pythonPath,

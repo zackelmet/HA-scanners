@@ -7,16 +7,16 @@ What it does
 
 OpenVAS runner
 - Option 1 (local binary): set `OPENVAS_CMD` to a wrapper (e.g., `/usr/local/bin/openvas-wrapper`) that runs OpenVAS/GVM and prints JSON to stdout.
-- Option 2 (remote service): set `OPENVAS_HTTP_URL` to a deployed OpenVAS runner (e.g., the dedicated Cloud Run service below); the worker will POST `{ scanId, userId, target, options }` and expect JSON.
+- Option 2 (remote service): set `OPENVAS_HTTP_URL` to an OpenVAS runner (e.g., Cloud Run service or VM HTTP wrapper); the worker will POST `{ scanId, userId, target, options }` and expect JSON.
 - Optional: `OPENVAS_TIMEOUT_MS` (default 900000 ms / 15m).
 - For smoke testing without OpenVAS installed, set `OPENVAS_USE_MOCK=1` (uses `runners/openvas-mock.js`).
 
-Standalone OpenVAS Cloud Run (recommended)
-- See `gcp/openvas-runner/` for a dedicated container based on `greenbone/openvas-scanner` with an HTTP wrapper at `/process`.
-- Build/push: `gcloud builds submit --tag gcr.io/hosted-scanners/openvas-runner gcp/openvas-runner`
+Standalone OpenVAS runner (Cloud Run or VM)
+- See `gcp/openvas-runner/` for an HTTP wrapper at `/process`.
+- Build/push for Cloud Run: `gcloud builds submit --tag gcr.io/hosted-scanners/openvas-runner gcp/openvas-runner`
 - Deploy: `gcloud run deploy openvas-runner --image gcr.io/hosted-scanners/openvas-runner --region=us-central1 --allow-unauthenticated --timeout=900`
-- Env flags: `OPENVAS_USERNAME`, `OPENVAS_PASSWORD`, optional `OPENVAS_HOST`/`OPENVAS_PORT` (default `127.0.0.1:9390` inside container), `OPENVAS_CONFIG_ID` (default Full+Fast), `OPENVAS_USE_MOCK=1` for mock responses while wiring.
-- Point the worker to it with `OPENVAS_HTTP_URL=https://openvas-runner-...run.app/process`.
+- VM option: install GVM + the wrapper on a VM, run `node wrapper.js` on port 8080, and set `OPENVAS_HTTP_URL=http://<vm-ip>:8080/process` in the worker (wrapper defaults to `/opt/openvas-runner/openvas_scan.py`).
+- Env flags: `OPENVAS_USERNAME`, `OPENVAS_PASSWORD`, optional `OPENVAS_HOST`/`OPENVAS_PORT` (default `127.0.0.1:9390` inside container/VM), `OPENVAS_CONFIG_ID` (default Full+Fast), `OPENVAS_USE_MOCK=1` for mock responses while wiring.
 
 Runners
 - `nmap`: Executes `nmap -oX - -T4 -sV` (with optional `options.topPorts` or `options.ports`) and parses XML to findings.
