@@ -15,3 +15,5 @@ SaaS platform for cloud-hosted vulnerability scanners (e.g., Nmap, OpenVAS) with
 
 ## One More Thing
 This project is for authorized security testing only. Ensure you have permission before scanning any target.
+
+Last updated: December 14, 2025
