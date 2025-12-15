@@ -24,7 +24,6 @@ export default function DashboardPage() {
   const [serviceDetection, setServiceDetection] = useState(true);
   const [osDetection, setOsDetection] = useState(false);
   const [defaultScripts, setDefaultScripts] = useState(false);
-  const [skipHostDiscovery, setSkipHostDiscovery] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
@@ -278,7 +277,6 @@ export default function DashboardPage() {
                         serviceDetection,
                         osDetection,
                         defaultScripts,
-                        skipHostDiscovery,
                       };
 
                       const res = await fetch("/api/scans", {
@@ -388,17 +386,6 @@ export default function DashboardPage() {
                               onChange={(e) => setOsDetection(e.target.checked)}
                             />
                             OS detection (-O)
-                          </label>
-                          <label className="flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              className="accent-[var(--primary)]"
-                              checked={skipHostDiscovery}
-                              onChange={(e) =>
-                                setSkipHostDiscovery(e.target.checked)
-                              }
-                            />
-                            Skip host discovery (-Pn)
                           </label>
                         </div>
                         <div className="text-xs neon-subtle">
