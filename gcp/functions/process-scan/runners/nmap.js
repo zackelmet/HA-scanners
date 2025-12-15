@@ -88,10 +88,8 @@ module.exports.run = async function run(job) {
   if (options.defaultScripts) args.push("-sC");
   if (options.osDetection) args.push("-O");
 
-  // Skip host discovery by default unless explicitly disabled
-  if (options.skipHostDiscovery !== false) {
-    args.push("-Pn");
-  }
+  // Always skip host discovery in Cloud Run (ICMP blocked)
+  args.push("-Pn");
 
   // Optional explicit ports override top-ports if provided and safe
   if (options.ports) {
