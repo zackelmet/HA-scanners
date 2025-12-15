@@ -8,7 +8,7 @@ export interface ScanJob {
 }
 
 /**
- * Enqueue (actually: directly POST) a scan job to the worker.
+ * Enqueue (fire-and-forget POST) a scan job to the worker.
  */
 export async function enqueueScanJob(job: ScanJob): Promise<void> {
   // Cloud Function / Cloud Run URL for the worker
@@ -79,17 +79,21 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
     // If defensive adjustment fails, we'll continue and rely on earlier validation
   }
 
-  const resp = await fetch(functionUrl, {
+  // Fire-and-forget: don't await the fetch so the API returns immediately
+  fetch(functionUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(job),
-  });
-
-  if (!resp.ok) {
-    const body = await resp.text().catch(() => "");
-    console.error("Failed to invoke worker directly:", resp.status, body);
-    throw new Error("Failed to invoke scan worker");
-  }
-
-  console.log(`✅ Dispatched scan job ${job.scanId} to ${functionUrl}`);
+  })
+    .then(async (resp) => {
+      if (!resp.ok) {
+        const body = await resp.text().catch(() => "");
+        console.error("Failed to invoke worker directly:", resp.status, body);
+      } else {
+        console.log(`✅ Dispatched scan job ${job.scanId} to ${functionUrl}`);
+      }
+    })
+    .catch((err) => {
+      console.error("Error dispatching scan job:", err);
+    });
 }
