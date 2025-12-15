@@ -302,7 +302,7 @@ export default function DashboardPage() {
                           `Scan queued: ${data.scanId || "queued"}`,
                         );
                         setTargetInput("");
-                        setActiveTab("history");
+                        setTimeout(() => setActiveTab("history"), 2000);
                       }
                     } catch (err: any) {
                       setSubmitError(err.message || "Unknown error");
