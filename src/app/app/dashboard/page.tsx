@@ -273,7 +273,7 @@ export default function DashboardPage() {
                       const token = await user.getIdToken(true);
 
                       const nmapOptions = {
-                        topPorts: 100,
+                        topPorts: 50,
                         serviceDetection,
                         osDetection,
                         defaultScripts,
@@ -350,10 +350,10 @@ export default function DashboardPage() {
                               Top ports
                             </div>
                             <div className="text-xs neon-subtle">
-                              Fixed at top 100 ports for faster runs
+                              Fixed at top 50 ports for faster runs
                             </div>
                           </div>
-                          <div className="neon-chip">100</div>
+                          <div className="neon-chip">50</div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <label className="flex items-center gap-2 text-sm">
@@ -389,7 +389,7 @@ export default function DashboardPage() {
                           </label>
                         </div>
                         <div className="text-xs neon-subtle">
-                          Nmap scans are capped to top 100 ports; toggle extra
+                          Nmap scans are capped to top 50 ports; toggle extra
                           probes as needed.
                         </div>
                       </div>
