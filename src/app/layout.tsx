@@ -28,7 +28,13 @@ export const metadata: Metadata = {
       "Vulnerability Scanning: Zero Install. Maximum Impact. Hosted Nmap and OpenVAS services on fast, optimized servers.",
   },
   icons: {
-    icon: "/HA-logo.png",
+    icon: [
+      { url: "/favicon/favicon.ico" },
+      { url: "/favicon/favicon-32x32.png", sizes: "32x32" },
+      { url: "/favicon/favicon-16x16.png", sizes: "16x16" },
+    ],
+    shortcut: "/favicon/favicon-32x32.png",
+    apple: "/favicon/apple-touch-icon.png",
   },
 };
 

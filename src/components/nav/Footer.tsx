@@ -1,6 +1,6 @@
-import { faGithub, faTwitter } from "@fortawesome/free-brands-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faLinkedin } from "@fortawesome/free-brands-svg-icons";
 import Image from "next/image";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 
 export default function Footer() {
@@ -32,20 +32,29 @@ export default function Footer() {
             <span className="neon-badge-muted">Powered by open source</span>
             <div className="flex items-center gap-3 text-[var(--text-muted)]">
               <Link
-                href="https://github.com/zackelmet/HA-scanners"
+                href="https://x.com/vuln_scanners"
                 target="_blank"
                 rel="noreferrer"
                 className="hover:text-[var(--primary)] transition"
+                aria-label="X (formerly Twitter)"
               >
-                <FontAwesomeIcon icon={faGithub} className="text-xl" />
+                <span className="inline-flex items-center justify-center p-1 rounded-md bg-[rgba(255,255,255,0.30)]">
+                  <Image
+                    src="/Twitter-X--Streamline-Bootstrap.svg"
+                    alt="X"
+                    width={20}
+                    height={20}
+                    className="h-5 w-5"
+                  />
+                </span>
               </Link>
               <Link
-                href="https://twitter.com"
+                href="https://www.linkedin.com/company/hacker-analytics/"
                 target="_blank"
                 rel="noreferrer"
                 className="hover:text-[var(--primary)] transition"
               >
-                <FontAwesomeIcon icon={faTwitter} className="text-xl" />
+                <FontAwesomeIcon icon={faLinkedin} className="text-xl" />
               </Link>
             </div>
           </div>
@@ -60,10 +69,10 @@ export default function Footer() {
               Pricing
             </Link>
             <Link
-              href="/blog"
+              href="/trust-safety"
               className="hover:text-[var(--primary)] transition"
             >
-              Blog
+              Trust + Safety Center
             </Link>
           </div>
           <div className="text-xs sm:text-sm">

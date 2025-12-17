@@ -65,8 +65,8 @@ export default function Home() {
             Choose Your Plan
           </h1>
           <p className="text-lg lg:text-xl neon-subtle max-w-2xl mx-auto">
-            Start protecting your infrastructure with hosted Nmap and OpenVAS.
-            Scale from solo to enterprise without managing scanners.
+            Protect your external infrastructure without managing scanners.
+            Scale from solo to enterprise.
           </p>
         </div>
 
@@ -102,12 +102,6 @@ const faqs: Faq[] = [
       "Our threat intelligence is updated continuously—multiple times per day—not weekly or monthly. This means you are always scanning against the absolute latest CVEs and zero-day threat intelligence, eliminating the risk of operating with an outdated vulnerability definition file.",
   },
   {
-    question:
-      "What kind of integrations do you offer with existing security tools?",
-    answer:
-      "We offer seamless integration with your existing workflow. This includes native hooks for CI/CD pipelines (like GitHub Actions and Jenkins), ticketing systems (Jira, ServiceNow), and communication tools (Slack) to automatically turn findings into trackable, prioritized remediation tickets.",
-  },
-  {
     question: "Will using a hosted scanner slow down or impact my targets?",
     answer:
       "Our scanners are engineered to be efficient and respectful of your network's capacity. You have granular control over scan intensity and scheduling, ensuring you can run comprehensive security checks without causing performance degradation to live production assets.",
@@ -125,13 +119,7 @@ const faqs: Faq[] = [
   {
     question: "Where is my scanning data and report information stored?",
     answer:
-      "All scan data is stored securely in encrypted cloud storage (using AES-256 encryption) within our certified data centers. We maintain strict geographical compliance and provide robust access controls to ensure only authorized users on your team can view the reports.",
-  },
-  {
-    question:
-      "If I cancel my subscription, what happens to my historical scan reports?",
-    answer:
-      "We allow you to retain access to your historical scan reports and data for 90 days after canceling your subscription, giving you ample time to export your records and maintain compliance archives. After 30 days, the data is securely and permanently deleted from our servers.",
+      "All scan data is stored securely in encrypted cloud storage (using AES-256 encryption) within our certified cloud region. We provide signed URLs for report access and robust access controls to ensure only authorized users on your team can view the reports.",
   },
 ];
 
