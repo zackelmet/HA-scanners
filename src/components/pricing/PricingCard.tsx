@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/context/AuthContext";
 import { useState } from "react";
+import Image from "next/image";
 
 interface PricingCardProps {
   name: string;
@@ -99,11 +100,20 @@ export default function PricingCard({
 
       <ul className="space-y-3 text-sm">
         {features.map((feature, idx) => (
-          <li key={idx} className="flex items-center gap-3 text-[var(--text)]">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[rgba(0,254,217,0.12)] border border-[rgba(0,254,217,0.35)] text-[var(--primary)] text-xs">
-              ✓
-            </span>
-            <span className="text-[var(--text-muted)]">{feature}</span>
+          <li key={idx} className="flex items-start gap-3 text-[var(--text)]">
+            <div className="flex-shrink-0 mt-1">
+              <Image
+                src="/check.png"
+                alt="check"
+                width={16}
+                height={16}
+                className="object-contain"
+                aria-hidden
+              />
+            </div>
+            <div className="text-[var(--text-muted)] leading-snug">
+              {feature}
+            </div>
           </li>
         ))}
       </ul>
