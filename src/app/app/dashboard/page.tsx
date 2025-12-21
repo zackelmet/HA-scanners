@@ -204,20 +204,20 @@ export default function DashboardPage() {
                 <p className="text-sm neon-subtle">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div>
-                      <strong>Nmap:</strong>{" "}
-                      {userData?.scannersUsedThisMonth?.nmap ?? 0} /{" "}
+                      <strong>nmap scans used:</strong>{" "}
+                      {userData?.scannersUsedThisMonth?.nmap ?? 0}/{" "}
                       {userData?.scannerLimits?.nmap ??
                         userData?.monthlyScansLimit ??
                         0}
                     </div>
                     <div>
-                      <strong>OpenVAS:</strong>{" "}
-                      {userData?.scannersUsedThisMonth?.openvas ?? 0} /{" "}
+                      <strong>openvas scans used:</strong>{" "}
+                      {userData?.scannersUsedThisMonth?.openvas ?? 0}/{" "}
                       {userData?.scannerLimits?.openvas ?? 0}
                     </div>
                     <div>
-                      <strong>Nikto:</strong>{" "}
-                      {userData?.scannersUsedThisMonth?.nikto ?? 0} /{" "}
+                      <strong>nikto scans used:</strong>{" "}
+                      {userData?.scannersUsedThisMonth?.nikto ?? 0}/{" "}
                       {userData?.scannerLimits?.nikto ?? 0}
                     </div>
                   </div>

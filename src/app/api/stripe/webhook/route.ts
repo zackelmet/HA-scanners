@@ -287,11 +287,15 @@ async function updateUserSubscription(
   console.log(`📈 Monthly scan limit: ${planLimits.monthlyScans}`);
 
   // Update user's subscription status and plan details
+  const aggregatedMonthlyLimit = (
+    Object.values(planLimits.scanners) as number[]
+  ).reduce((acc, v) => acc + v, 0);
+
   console.log(`🔄 Updating user ${userId} in Firestore...`);
   console.log(`📊 Setting:`, {
     subscriptionStatus: status,
     currentPlan: planTier,
-    monthlyScansLimit: planLimits.monthlyScans,
+    monthlyScansLimit: aggregatedMonthlyLimit,
   });
 
   // Write per-scanner limits to user doc and initialize per-scanner usage counters
@@ -303,7 +307,7 @@ async function updateUserSubscription(
       stripeSubscriptionId: subscriptionId,
       stripeCustomerId: customerId,
       currentPlan: planTier,
-      monthlyScansLimit: planLimits.monthlyScans,
+      monthlyScansLimit: aggregatedMonthlyLimit,
       scannerLimits: planLimits.scanners,
       features: planLimits.features,
       currentPeriodStart: admin.firestore.Timestamp.fromDate(

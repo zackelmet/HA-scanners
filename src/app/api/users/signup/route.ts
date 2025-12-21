@@ -38,6 +38,9 @@ export async function POST(req: NextRequest) {
 
       // Create a new user document with full structure
       const freePlan = PLAN_LIMITS.free;
+      const aggregatedMonthlyLimit = (
+        Object.values(freePlan.scanners) as number[]
+      ).reduce((acc, v) => acc + v, 0);
       const newUser: Partial<UserDocument> = {
         uid,
         name: name || "",
@@ -46,7 +49,7 @@ export async function POST(req: NextRequest) {
         stripeSubscriptionId: null,
         subscriptionStatus: "none",
         currentPlan: "free",
-        monthlyScansLimit: freePlan.monthlyScans,
+        monthlyScansLimit: aggregatedMonthlyLimit,
         // Initialize per-scanner limits and counters
         scannerLimits: freePlan.scanners,
         scannersUsedThisMonth: { nmap: 0, openvas: 0, nikto: 0 },

@@ -116,6 +116,61 @@ export async function POST(request: NextRequest) {
       // per-scanner quotas immediately. The worker webhook writes scan
       // metadata but does not increment usage to avoid double-counting.
 
+      // Reconcile actual billing units from the worker:
+      // - If the scan completed and the worker reports `billingUnits` > 1,
+      //   increment the user's scanner counter by (billingUnits - 1).
+      // - If the scan did NOT complete (failed/cancelled), rollback the
+      //   reserved unit from scan creation by decrementing the scanner
+      //   counter by 1 (bounded to >= 0).
+      try {
+        if (scannerType) {
+          const scanner = scannerType as "nmap" | "openvas" | "nikto";
+          const units =
+            typeof billingUnits === "number" && billingUnits > 0
+              ? billingUnits
+              : 1;
+
+          const userRef = firestore.collection("users").doc(userId);
+
+          await firestore.runTransaction(async (tx) => {
+            const usrSnap = await tx.get(userRef);
+            if (!usrSnap.exists) return;
+            const usr = usrSnap.data() as any;
+            const currentUsed =
+              (usr.scannersUsedThisMonth &&
+                usr.scannersUsedThisMonth[scanner]) ||
+              0;
+
+            if (normalizedStatus === "completed") {
+              const extra = units - 1;
+              if (extra > 0) {
+                tx.update(userRef, {
+                  [`scannersUsedThisMonth.${scanner}`]:
+                    admin.firestore.FieldValue.increment(extra),
+                  scansThisMonth: admin.firestore.FieldValue.increment(extra),
+                  totalScansAllTime:
+                    admin.firestore.FieldValue.increment(extra),
+                  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                });
+              }
+            } else {
+              // rollback the reserved unit from creation
+              const dec = Math.min(1, currentUsed);
+              if (dec > 0) {
+                tx.update(userRef, {
+                  [`scannersUsedThisMonth.${scanner}`]:
+                    admin.firestore.FieldValue.increment(-dec),
+                  scansThisMonth: admin.firestore.FieldValue.increment(-dec),
+                  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                });
+              }
+            }
+          });
+        }
+      } catch (err: any) {
+        console.error("Failed to reconcile billing units on webhook:", err);
+      }
+
       console.log(`✅ Updated scan ${scanId} status to ${status}`);
     } catch (err: any) {
       console.error(
