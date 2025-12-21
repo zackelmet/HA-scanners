@@ -112,27 +112,9 @@ export async function POST(request: NextRequest) {
         { merge: true },
       );
 
-      // Increment per-user usage counters for this scannerType (transactional) on success only
-      const shouldBill = normalizedStatus === "completed";
-      if (scannerType && shouldBill) {
-        const usageRef = firestore.collection("usage").doc(userId);
-        const incrementBy = typeof billingUnits === "number" ? billingUnits : 1;
-        try {
-          await firestore.runTransaction(async (tx) => {
-            const snap = await tx.get(usageRef);
-            if (!snap.exists) {
-              tx.set(usageRef, { scanners: { [scannerType]: incrementBy } });
-            } else {
-              tx.update(usageRef, {
-                [`scanners.${scannerType}`]:
-                  admin.firestore.FieldValue.increment(incrementBy),
-              });
-            }
-          });
-        } catch (e) {
-          console.warn("Failed to increment usage counter:", e);
-        }
-      }
+      // NOTE: usage counters are incremented at scan creation time to enforce
+      // per-scanner quotas immediately. The worker webhook writes scan
+      // metadata but does not increment usage to avoid double-counting.
 
       console.log(`✅ Updated scan ${scanId} status to ${status}`);
     } catch (err: any) {

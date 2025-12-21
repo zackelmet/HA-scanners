@@ -125,42 +125,94 @@ export async function POST(request: NextRequest) {
       userData.scansThisMonth = 0;
     }
 
-    // Check monthly scan limits from user document
-    const scansThisMonth = userData.scansThisMonth || 0;
-    const monthlyLimit = planLimits.monthlyScans;
+    // Enforce per-scanner monthly limits
+    const scanner = type as "nmap" | "openvas" | "nikto";
 
-    // Check if limit reached (0 means no scans allowed for free tier)
-    if (scansThisMonth >= monthlyLimit) {
+    // Determine user's scanner limits (fall back to plan defaults)
+    const userScannerLimits = userData.scannerLimits || planLimits.scanners;
+    const scannerLimit = userScannerLimits?.[scanner] ?? 0;
+
+    // Determine current used count (try user doc counters first)
+    const usedThisMonth =
+      (userData.scannersUsedThisMonth &&
+        userData.scannersUsedThisMonth[scanner]) ||
+      0;
+
+    if (usedThisMonth >= scannerLimit) {
       return NextResponse.json(
         {
-          error: "Monthly scan limit reached",
-          message: `You have used ${scansThisMonth}/${monthlyLimit} scans this month. Upgrade your plan for more scans.`,
-          scansUsed: scansThisMonth,
-          scanLimit: monthlyLimit,
+          error: "Monthly scanner quota reached",
+          message: `You have used ${usedThisMonth}/${scannerLimit} ${scanner} scans this month. Upgrade your plan for more scans.`,
+          scansUsed: usedThisMonth,
+          scanLimit: scannerLimit,
+          scanner: scanner,
           currentPlan: userData.currentPlan,
         },
         { status: 429 },
       );
     }
 
-    // Create scan in Firestore
-    const scanRef = await firestore.collection("scans").add({
-      userId,
-      type,
-      target,
-      options: normalizedOptions,
-      status: "queued",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    // Create scan and atomically increment per-scanner usage counters
+    let scanRef: any = null;
+    try {
+      await firestore.runTransaction(async (tx) => {
+        const freshUser = (await tx.get(userDocRef)).data() as any;
 
-    // Atomically update user's counters (we no longer write legacy arrays).
-    await userDocRef.update({
-      scansThisMonth: admin.firestore.FieldValue.increment(1),
-      totalScansAllTime: admin.firestore.FieldValue.increment(1),
-      lastScanDate: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+        // Re-check quota inside transaction
+        const currentUsed =
+          (freshUser.scannersUsedThisMonth &&
+            freshUser.scannersUsedThisMonth[scanner]) ||
+          0;
+        const currentLimit =
+          (freshUser.scannerLimits && freshUser.scannerLimits[scanner]) ||
+          userScannerLimits[scanner];
+        if (currentUsed >= currentLimit) {
+          throw new Error("QuotaExceeded");
+        }
+
+        const scansCollectionRef = firestore.collection("scans");
+        const newScanRef = scansCollectionRef.doc();
+        tx.set(newScanRef, {
+          userId,
+          type,
+          target,
+          options: normalizedOptions,
+          status: "queued",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Increment per-scanner usage counters on user doc
+        tx.update(userDocRef, {
+          [`scannersUsedThisMonth.${scanner}`]:
+            admin.firestore.FieldValue.increment(1),
+          scansThisMonth: admin.firestore.FieldValue.increment(1),
+          totalScansAllTime: admin.firestore.FieldValue.increment(1),
+          lastScanDate: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        scanRef = newScanRef;
+      });
+    } catch (err: any) {
+      if (err && err.message === "QuotaExceeded") {
+        return NextResponse.json(
+          {
+            error: "Monthly scanner quota reached",
+            message: `You have used ${usedThisMonth}/${scannerLimit} ${scanner} scans this month. Upgrade your plan for more scans.`,
+            scansUsed: usedThisMonth,
+            scanLimit: scannerLimit,
+            currentPlan: userData.currentPlan,
+          },
+          { status: 429 },
+        );
+      }
+      console.error("Transaction failed creating scan:", err);
+      return NextResponse.json(
+        { error: "Failed to create scan" },
+        { status: 500 },
+      );
+    }
 
     // Prepare per-user subcollection ref for scalable per-user queries
     const userScanRef = firestore
@@ -226,6 +278,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Compute remaining for the requested scanner after this queued scan
+    const prevUsedCount =
+      (userData.scannersUsedThisMonth &&
+        userData.scannersUsedThisMonth[scanner]) ||
+      usedThisMonth;
+    const remainingAfter = Math.max(0, scannerLimit - (prevUsedCount + 1));
+
     return NextResponse.json(
       {
         success: true,
@@ -237,7 +296,10 @@ export async function POST(request: NextRequest) {
           target,
           status: "queued",
         },
-        scansRemaining: monthlyLimit - scansThisMonth - 1,
+        scanner,
+        scansUsed: prevUsedCount + 1,
+        scanLimit: scannerLimit,
+        scansRemaining: remainingAfter,
       },
       { status: 201 },
     );

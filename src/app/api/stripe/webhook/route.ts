@@ -294,6 +294,7 @@ async function updateUserSubscription(
     monthlyScansLimit: planLimits.monthlyScans,
   });
 
+  // Write per-scanner limits to user doc and initialize per-scanner usage counters
   await db
     .collection("users")
     .doc(userId)
@@ -303,6 +304,7 @@ async function updateUserSubscription(
       stripeCustomerId: customerId,
       currentPlan: planTier,
       monthlyScansLimit: planLimits.monthlyScans,
+      scannerLimits: planLimits.scanners,
       features: planLimits.features,
       currentPeriodStart: admin.firestore.Timestamp.fromDate(
         new Date(subscription.current_period_start * 1000),
@@ -312,6 +314,16 @@ async function updateUserSubscription(
       ),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+  // If scannersUsedThisMonth is missing, set to zeros in a separate safe update
+  const userRef = db.collection("users").doc(userId);
+  const userSnap = await userRef.get();
+  const existing = userSnap.data() || {};
+  if (!existing.scannersUsedThisMonth) {
+    await userRef.update({
+      scannersUsedThisMonth: { nmap: 0, openvas: 0, nikto: 0 },
+    });
+  }
 
   console.log("✅ Firestore update successful!");
   console.log(

@@ -25,8 +25,19 @@ export interface UserDocument {
   currentPeriodEnd?: Timestamp;
 
   // Scan Limits & Usage
-  monthlyScansLimit: number; // 500, 2500, 10000, or 0 (none)
-  scansThisMonth: number; // Counter that resets monthly
+  monthlyScansLimit: number; // aggregate (sum of per-scanner limits) kept for backwards compat
+  // Per-scanner limits and usage counters
+  scannerLimits?: {
+    nmap: number;
+    openvas: number;
+    nikto: number;
+  };
+  scannersUsedThisMonth?: {
+    nmap: number;
+    openvas: number;
+    nikto: number;
+  };
+  scansThisMonth: number; // legacy counter (kept for compatibility) that resets monthly
   totalScansAllTime: number; // Lifetime counter
   lastScanDate?: Timestamp;
   lastMonthlyReset?: Timestamp; // Track when we last reset the counter
@@ -51,7 +62,7 @@ export interface UserDocument {
 
 export interface ScanMetadata {
   scanId: string;
-  type: "nmap" | "openvas";
+  type: "nmap" | "openvas" | "nikto";
   target: string;
   status: "queued" | "running" | "completed" | "failed";
   startTime: Timestamp;
@@ -70,6 +81,7 @@ export const PLAN_LIMITS = {
   free: {
     tier: "free" as PlanTier,
     monthlyScans: 0, // Free users can't scan
+    scanners: { nmap: 0, openvas: 0, nikto: 0 },
     features: {
       nmapEnabled: false,
       openvasEnabled: false,
@@ -81,6 +93,7 @@ export const PLAN_LIMITS = {
   essential: {
     tier: "essential" as PlanTier,
     monthlyScans: 500,
+    scanners: { nmap: 1920, openvas: 240, nikto: 60 },
     features: {
       nmapEnabled: true,
       openvasEnabled: false,
@@ -92,6 +105,7 @@ export const PLAN_LIMITS = {
   pro: {
     tier: "pro" as PlanTier,
     monthlyScans: 2500,
+    scanners: { nmap: 15360, openvas: 1920, nikto: 300 },
     features: {
       nmapEnabled: true,
       openvasEnabled: true,
@@ -103,6 +117,7 @@ export const PLAN_LIMITS = {
   scale: {
     tier: "scale" as PlanTier,
     monthlyScans: 10000,
+    scanners: { nmap: 122880, openvas: 7680, nikto: 1500 },
     features: {
       nmapEnabled: true,
       openvasEnabled: true,

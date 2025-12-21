@@ -42,6 +42,16 @@ export default function DashboardPage() {
     return Math.max(0, remaining);
   }, [userData]);
 
+  const scannerRemaining = (scanner: "nmap" | "openvas" | "nikto") => {
+    if (!userData) return 0;
+    const limits = userData.scannerLimits || { nmap: 0, openvas: 0, nikto: 0 };
+    const used =
+      (userData.scannersUsedThisMonth &&
+        userData.scannersUsedThisMonth[scanner]) ||
+      0;
+    return Math.max(0, (limits[scanner] || 0) - used);
+  };
+
   const formatDate = (ts: any) => {
     if (!ts) return "-";
     if (typeof ts.toDate === "function") return ts.toDate().toLocaleString();
@@ -192,8 +202,25 @@ export default function DashboardPage() {
                   {userData?.currentPlan?.toUpperCase()} Plan Active
                 </h3>
                 <p className="text-sm neon-subtle">
-                  {scansRemaining} of {userData?.monthlyScansLimit} scans
-                  remaining this month
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <strong>Nmap:</strong>{" "}
+                      {userData?.scannersUsedThisMonth?.nmap ?? 0} /{" "}
+                      {userData?.scannerLimits?.nmap ??
+                        userData?.monthlyScansLimit ??
+                        0}
+                    </div>
+                    <div>
+                      <strong>OpenVAS:</strong>{" "}
+                      {userData?.scannersUsedThisMonth?.openvas ?? 0} /{" "}
+                      {userData?.scannerLimits?.openvas ?? 0}
+                    </div>
+                    <div>
+                      <strong>Nikto:</strong>{" "}
+                      {userData?.scannersUsedThisMonth?.nikto ?? 0} /{" "}
+                      {userData?.scannerLimits?.nikto ?? 0}
+                    </div>
+                  </div>
                 </p>
               </div>
             </div>
@@ -420,8 +447,13 @@ export default function DashboardPage() {
                 </form>
 
                 <div className="mt-4 text-sm neon-subtle">
-                  💡 <strong>Scans remaining:</strong> {scansRemaining} /{" "}
-                  {userData?.monthlyScansLimit}
+                  💡{" "}
+                  <strong>
+                    Scans remaining ({scannerType.toUpperCase()}):
+                  </strong>{" "}
+                  {scannerRemaining(scannerType)} /{" "}
+                  {userData?.scannerLimits?.[scannerType] ??
+                    userData?.monthlyScansLimit}
                 </div>
               </div>
             )}

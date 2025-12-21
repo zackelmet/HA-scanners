@@ -47,6 +47,9 @@ export async function POST(req: NextRequest) {
         subscriptionStatus: "none",
         currentPlan: "free",
         monthlyScansLimit: freePlan.monthlyScans,
+        // Initialize per-scanner limits and counters
+        scannerLimits: freePlan.scanners,
+        scannersUsedThisMonth: { nmap: 0, openvas: 0, nikto: 0 },
         scansThisMonth: 0,
         totalScansAllTime: 0,
         lastMonthlyReset: admin.firestore.FieldValue.serverTimestamp() as any,
