@@ -92,7 +92,22 @@ export default function AuthForm() {
     try {
       const signUpModule = await import("@/lib/firebase/signup");
       const signUp = signUpModule.default as any;
-      const { user, error } = await signUp(email, password);
+      const { user, error } = await signUp(
+        email,
+        password,
+        async (userCredential: any) => {
+          // Ensure a Firestore user document is created for newly registered users
+          await fetch("/api/users/signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              uid: userCredential.user.uid,
+              email: userCredential.user.email,
+              name: userCredential.user.displayName,
+            }),
+          });
+        },
+      );
       if (user) {
         router.push("/app/dashboard");
       } else if (error) {
