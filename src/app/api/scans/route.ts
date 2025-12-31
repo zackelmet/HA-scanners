@@ -239,7 +239,7 @@ export async function POST(request: NextRequest) {
     // Enqueue the scan job to Cloud Tasks (Cloud Run worker will process it)
     let enqueueSucceeded = false;
     try {
-      const tasksModule = await import("@/lib/gcp/tasksClient");
+      const tasksModule = await import("@/lib/gcp/scannerClient");
       const enqueue = tasksModule.enqueueScanJob;
       if (enqueue) {
         await enqueue({
