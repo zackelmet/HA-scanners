@@ -383,41 +383,43 @@ export default function DashboardPage() {
                           <div className="neon-chip">50</div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <label className="flex items-center gap-2 text-sm">
+                          <label className="flex items-center gap-2 text-sm opacity-50 cursor-not-allowed">
                             <input
                               type="checkbox"
                               className="accent-[var(--primary)]"
-                              checked={serviceDetection}
+                              checked={false}
                               onChange={(e) =>
                                 setServiceDetection(e.target.checked)
                               }
+                              disabled
                             />
                             Service detection (-sV)
                           </label>
-                          <label className="flex items-center gap-2 text-sm">
+                          <label className="flex items-center gap-2 text-sm opacity-50 cursor-not-allowed">
                             <input
                               type="checkbox"
                               className="accent-[var(--primary)]"
-                              checked={defaultScripts}
+                              checked={false}
                               onChange={(e) =>
                                 setDefaultScripts(e.target.checked)
                               }
+                              disabled
                             />
                             Default scripts (-sC)
                           </label>
-                          <label className="flex items-center gap-2 text-sm">
+                          <label className="flex items-center gap-2 text-sm opacity-50 cursor-not-allowed">
                             <input
                               type="checkbox"
                               className="accent-[var(--primary)]"
                               checked={osDetection}
                               onChange={(e) => setOsDetection(e.target.checked)}
+                              disabled
                             />
                             OS detection (-O)
                           </label>
                         </div>
                         <div className="text-xs neon-subtle">
-                          Nmap scans are capped to top 50 ports; toggle extra
-                          probes as needed.
+                          Advanced nmap features are currently disabled.
                         </div>
                       </div>
                     )}

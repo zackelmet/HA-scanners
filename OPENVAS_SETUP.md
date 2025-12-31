@@ -1,47 +1,38 @@
 # OpenVAS Scanner GCP Architecture
 
-This document outlines the architecture for the hosted OpenVAS scanner. This architecture uses a persistent OpenVAS environment and a `process-scan` service that acts as a client to it.
+This document outlines the architecture for the hosted OpenVAS scanner.
 
 ## Architecture Overview
 
-The system uses a hybrid architecture. A persistent OpenVAS environment is deployed on a GCE VM using `docker-compose`. The web app enqueues a scan job using Cloud Tasks, which then triggers the `process-scan` Cloud Run service. The `process-scan` service then communicates with the persistent OpenVAS environment to run the scan.
+The system uses a hybrid architecture. The web app's backend API acts as a router, calling the appropriate scanner based on the user's request. For OpenVAS scans, the web app backend makes a direct API call to a service running on the dedicated OpenVAS VM.
 
 ```
-┌───────────┐      ┌────────────────┐      ┌────────────────┐
-│           │      │                │      │                │
-│  Web App  │----->│  1. Cloud Tasks  │----->│ 2. process-scan│
-│ (Frontend)│      │   (Scan Queue)   │      │ (Cloud Run)    │
-└───────────┘      └────────────────┘      └────────┬───────┘
-                                                     │ 3. Run OpenVAS Scan
-                                                     │
-                                                     ▼
-                                     ┌───────────────────────────────────┐
-                                     │  4. OpenVAS Runner (`openvas.js`) │
-                                     │   - Acts as a client to the       │
-                                     │     persistent OpenVAS environment│
-                                     │   - Initiates and monitors scans  │
-                                     └───────────────────────────────────┘
-                                                     │
-                                                     │
-               ┌-------------------------------------┘
-               │
-               ▼
-┌──────────────┴───────────────┐      ┌───────────────────────────────┐
-│                              │      │                               │
-│ 5. Persistent OpenVAS Env    │<---->│ 6. `process-scan` retrieves   │
-│    (GCE VM with Docker)      │      │    results, saves to GCS,     │
-│                              │      │    and sends webhook          │
-└──────────────────────────────┘      └───────────────────────────────┘
+┌───────────────┐      ┌───────────────────────────────────┐
+│               │      │                                   │
+│    Web App    │      │         2. OpenVAS VM             │
+│ (Backend API) │----->│  - Receives direct API call       │
+│               │      │  - Executes OpenVAS scan          │
+└───────────────┘      │  - Saves results to GCS           │
+                       │  - Sends completion webhook       │
+                       └───────────────────┬───────────────┘
+                                           │ 3.
+                                           │
+                                           ▼
+                       ┌───────────────────┴─────────────────┐
+                       │  Google Cloud Storage & Webhook   │
+                       └───────────────────────────────────┘
 ```
 
 ## Component Breakdown
 
-1.  **Cloud Tasks:** The web app creates a task in a Cloud Tasks queue to decouple the frontend from the backend scanner and avoid long-running requests.
+1.  **Web App (Backend API):** The Next.js backend receives a scan request from the user. It validates the request and user permissions, then acts as a **router**, sending a job payload directly to the appropriate scanner. For OpenVAS, it calls an API endpoint exposed on the OpenVAS VM.
 
-2.  **`process-scan` Service:** A Cloud Run service that receives and processes scan jobs from the Cloud Tasks queue.
+2.  **OpenVAS VM:** A dedicated Google Compute Engine (GCE) VM that runs the OpenVAS/GVM software stack. It exposes a simple, custom API to receive job requests from the web app's backend. It then executes the scan, saves the results to Google Cloud Storage, and sends a webhook to notify the web app of completion.
 
-3.  **OpenVAS Runner:** A module within the `process-scan` service that is dynamically loaded for `openvas` scan types. It acts as a client to the persistent OpenVAS environment, using `gvm-tools` to initiate and monitor scans.
+3.  **GCS & Webhook:** After saving the results, the service on the OpenVAS VM sends a webhook POST request back to the web app's `/api/scans/webhook` endpoint to notify it that the scan is complete and provide the location of the results file.
 
-4.  **Persistent OpenVAS Environment:** A dedicated GCE VM running the OpenVAS suite of services using `docker-compose`. This environment is responsible for the actual scanning and vulnerability management.
+## Future Considerations
 
-5.  **GCS & Webhook:** The `process-scan` service retrieves the scan results from the persistent OpenVAS environment, saves them to Google Cloud Storage, and sends a webhook to the web app with the location of the results.
+*   **Authentication:** Implement a secure authentication mechanism (e.g., API Key, OAuth) between the web app backend and the API service on the OpenVAS VM.
+*   **Scalability:** Develop a plan to manage the OpenVAS VM, potentially moving to a managed instance group for better scalability if scan volume increases.
+*   **Error Handling and Monitoring:** Implement robust error handling and a monitoring solution to track the health of the OpenVAS VM and the scanning service running on it.
