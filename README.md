@@ -10,7 +10,7 @@ SaaS platform for cloud-hosted vulnerability scanners (e.g., Nmap, OpenVAS) with
 
 ## Deploying
 - Frontend: Vercel (Next.js 14)
-- Backend: Cloud Run for the `process-scan` service (routing scans) and dedicated Cloud Functions for Nmap and Nikto scans, along with webhook endpoints.
+- Backend: Dedicated per-scanner services (Cloud Run / Cloud Functions) for Nmap and Nikto, each receiving scan jobs directly from the web app's backend and sending completion webhooks back to the app. (The legacy centralized `process-scan` forwarder is deprecated.)
 - Storage: GCS bucket for scan results
 
 ## One More Thing
