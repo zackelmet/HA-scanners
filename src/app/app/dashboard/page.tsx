@@ -300,10 +300,7 @@ export default function DashboardPage() {
                       const token = await user.getIdToken(true);
 
                       const nmapOptions = {
-                        topPorts: 50,
-                        serviceDetection,
-                        osDetection,
-                        defaultScripts,
+                        topPorts: 100,
                       };
 
                       const res = await fetch("/api/scans", {
@@ -377,49 +374,16 @@ export default function DashboardPage() {
                               Top ports
                             </div>
                             <div className="text-xs neon-subtle">
-                              Fixed at top 50 ports for faster runs
+                              Port enumeration and service detection are always
+                              performed.
                             </div>
                           </div>
-                          <div className="neon-chip">50</div>
+                          <div className="neon-chip">100</div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <label className="flex items-center gap-2 text-sm opacity-50 cursor-not-allowed">
-                            <input
-                              type="checkbox"
-                              className="accent-[var(--primary)]"
-                              checked={false}
-                              onChange={(e) =>
-                                setServiceDetection(e.target.checked)
-                              }
-                              disabled
-                            />
-                            Service detection (-sV)
-                          </label>
-                          <label className="flex items-center gap-2 text-sm opacity-50 cursor-not-allowed">
-                            <input
-                              type="checkbox"
-                              className="accent-[var(--primary)]"
-                              checked={false}
-                              onChange={(e) =>
-                                setDefaultScripts(e.target.checked)
-                              }
-                              disabled
-                            />
-                            Default scripts (-sC)
-                          </label>
-                          <label className="flex items-center gap-2 text-sm opacity-50 cursor-not-allowed">
-                            <input
-                              type="checkbox"
-                              className="accent-[var(--primary)]"
-                              checked={osDetection}
-                              onChange={(e) => setOsDetection(e.target.checked)}
-                              disabled
-                            />
-                            OS detection (-O)
-                          </label>
-                        </div>
-                        <div className="text-xs neon-subtle">
-                          Advanced nmap features are currently disabled.
+
+                        <div className="text-sm neon-subtle">
+                          Scans perform port enumeration (top 100 ports) and
+                          service/version detection (-sV -sC) by default.
                         </div>
                       </div>
                     )}
