@@ -58,6 +58,15 @@ export async function POST(request: NextRequest) {
     } = result;
 
     console.log(`📥 Webhook received for scan ${scanId}:`, status);
+    console.log(`📦 Webhook payload URLs:`, {
+      gcpStorageUrl: gcpStorageUrl || "NOT PROVIDED",
+      gcpSignedUrl: gcpSignedUrl
+        ? `${gcpSignedUrl.slice(0, 60)}...`
+        : "NOT PROVIDED",
+      gcpReportSignedUrl: gcpReportSignedUrl
+        ? `${gcpReportSignedUrl.slice(0, 60)}...`
+        : "NOT PROVIDED",
+    });
 
     // Update per-user subcollection document for this scan (preferred)
     const userScanRef = firestore
