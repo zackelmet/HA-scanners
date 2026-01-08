@@ -5,6 +5,7 @@ Performs web vulnerability scanning using ZAP API
 """
 
 import sys
+import os
 import time
 import json
 import argparse
@@ -19,6 +20,9 @@ ZAP_PROXY = {'http': 'http://localhost:8080', 'https': 'http://localhost:8080'}
 
 # GCS Configuration
 GCS_BUCKET = 'hacker-analytics-zap-reports'
+
+# Webhook Configuration
+WEBHOOK_SECRET = os.environ.get('GCP_WEBHOOK_SECRET', 'your-webhook-secret-key')
 
 def log(message):
     """Log with timestamp"""
@@ -213,7 +217,7 @@ def send_webhook(webhook_url: str, scan_id: str, user_id: str, results: dict, re
     
     headers = {
         'Content-Type': 'application/json',
-        'X-Webhook-Secret': 'your-webhook-secret-key'
+        'X-Webhook-Secret': WEBHOOK_SECRET
     }
     
     try:
