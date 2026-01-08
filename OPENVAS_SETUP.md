@@ -1,38 +1,180 @@
-# OpenVAS Scanner GCP Architecture
+# OpenVAS Scanner Setup & Architecture
 
-This document outlines the architecture for the hosted OpenVAS scanner.
+**Status**: ✅ Deployed and operational on GCP VM
+
+**Endpoint**: `http://136.115.155.198:8080/scan`
+
+## Quick Links
+
+- **Deployment Scripts**: `gcp/functions/openvas-scanner/`
+- **VM Instance**: `openvas-scanner-vm` (us-central1-a)
+- **Documentation**: See `gcp/functions/openvas-scanner/README.md` for detailed deployment instructions
 
 ## Architecture Overview
 
-The system uses a hybrid architecture. The web app's backend API acts as a router, calling the appropriate scanner based on the user's request. For OpenVAS scans, the web app backend makes a direct API call to a service running on the dedicated OpenVAS VM.
+OpenVAS runs on a dedicated GCP VM (not Cloud Run) due to its complexity and resource requirements. The web app backend dispatches scan requests directly to the VM's Flask API server.
 
 ```
-┌───────────────┐      ┌───────────────────────────────────┐
-│               │      │                                   │
-│    Web App    │      │         2. OpenVAS VM             │
-│ (Backend API) │----->│  - Receives direct API call       │
-│               │      │  - Executes OpenVAS scan          │
-└───────────────┘      │  - Saves results to GCS           │
-                       │  - Sends completion webhook       │
-                       └───────────────────┬───────────────┘
-                                           │ 3.
-                                           │
-                                           ▼
-                       ┌───────────────────┴─────────────────┐
-                       │  Google Cloud Storage & Webhook   │
-                       └───────────────────────────────────┘
+┌─────────────────┐
+│   Next.js App   │
+│  (Vercel)       │
+└────────┬────────┘
+         │ 1. POST /scan request
+         │    {scanId, userId, target}
+         ▼
+┌────────────────────────────────────────┐
+│     OpenVAS VM (136.115.155.198)      │
+│  ┌──────────────────────────────────┐ │
+│  │  Flask API (port 8080)           │ │
+│  │  - Accepts scan requests         │ │
+│  │  - Spawns background process     │ │
+│  └──────────┬───────────────────────┘ │
+│             │                          │
+│             ▼                          │
+│  ┌──────────────────────────────────┐ │
+│  │  run_openvas_scan.py             │ │
+│  │  - Uses gvm-cli via socket       │ │
+│  │  - Greenbone Community Edition   │ │
+│  │  - Docker Compose (7 containers) │ │
+│  └──────────┬───────────────────────┘ │
+└─────────────┼──────────────────────────┘
+              │ 2. Upload results
+              ▼
+   ┌──────────────────────┐
+   │  Google Cloud        │
+   │  Storage Bucket      │
+   │  - XML & JSON        │
+   │  - Signed URLs       │
+   └──────────┬───────────┘
+              │ 3. Webhook
+              ▼
+   ┌──────────────────────┐
+   │  /api/scans/webhook  │
+   │  - Updates Firestore │
+   │  - Scan complete     │
+   └──────────────────────┘
 ```
 
-## Component Breakdown
+## Current Setup
 
-1.  **Web App (Backend API):** The Next.js backend receives a scan request from the user. It validates the request and user permissions, then acts as a **router**, sending a job payload directly to the appropriate scanner. For OpenVAS, it calls an API endpoint exposed on the OpenVAS VM.
+### VM Configuration
+- **Instance**: openvas-scanner-vm
+- **Machine Type**: e2-medium (2 vCPU, 4 GB RAM)
+- **Zone**: us-central1-a
+- **External IP**: 136.115.155.198
+- **OS**: Ubuntu (Python 3.10)
 
-2.  **OpenVAS VM:** A dedicated Google Compute Engine (GCE) VM that runs the OpenVAS/GVM software stack. It exposes a simple, custom API to receive job requests from the web app's backend. It then executes the scan, saves the results to Google Cloud Storage, and sends a webhook to notify the web app of completion.
+### Software Stack
+- **Greenbone Community Edition**: Docker Compose deployment
+- **GVM**: Version 22.7 (gvmd, ospd-openvas, etc.)
+- **API Server**: Flask (Python)
+- **Scan Script**: Python with gvm-cli
 
-3.  **GCS & Webhook:** After saving the results, the service on the OpenVAS VM sends a webhook POST request back to the web app's `/api/scans/webhook` endpoint to notify it that the scan is complete and provide the location of the results file.
+### Authentication
+- **GVM Credentials**: Username/password authentication via gvm-cli
+- **Webhook Secret**: `x-webhook-secret` header for webhook authentication
+- **GCS Access**: Service account key at `/home/hackeranalytics0/sa-key.json`
 
-## Future Considerations
+## Key Components
 
-*   **Authentication:** Implement a secure authentication mechanism (e.g., API Key, OAuth) between the web app backend and the API service on the OpenVAS VM.
-*   **Scalability:** Develop a plan to manage the OpenVAS VM, potentially moving to a managed instance group for better scalability if scan volume increases.
-*   **Error Handling and Monitoring:** Implement robust error handling and a monitoring solution to track the health of the OpenVAS VM and the scanning service running on it.
+1. **openvas_api_server.py**: Flask API on port 8080
+   - Accepts POST `/scan` with `{scanId, userId, target, webhookUrl}`
+   - Spawns detached background process for each scan
+   - Returns 202 Accepted immediately
+
+2. **run_openvas_scan.py**: Main scan executor
+   - Connects to GVM via Unix socket (`/var/run/gvmd/gvmd.sock`)
+   - Creates target and task using gvm-cli
+   - Polls for completion (10-30 min scans)
+   - Uploads XML + JSON results to GCS
+   - Generates signed URLs (7-day expiration)
+   - Sends webhook on completion or failure
+
+3. **Docker Compose**: Greenbone containers
+   - gvmd (GVM daemon)
+   - ospd-openvas (OpenVAS scanner)
+   - postgresql (database)
+   - redis (cache)
+   - Additional support containers
+
+## Configuration
+
+### Environment Variables (Vercel)
+```env
+GCP_OPENVAS_SCANNER_URL=http://136.115.155.198:8080/scan
+GCP_WEBHOOK_SECRET=<secret>
+```
+
+### Scan Settings
+- **Config**: "Full and fast" (`daba56c8-73ec-11df-a475-002264764cea`)
+- **Scanner**: OpenVAS Default (`08b69003-5fc2-4037-a479-93b440211c73`)
+- **Port List**: All IANA TCP ports
+- **Timeout**: 30 minutes
+- **Report Format**: Full XML with all results (`details='1' filter='rows=-1'`)
+
+### GCS Storage
+- **Bucket**: `hosted-scanners-scan-results`
+- **Path Pattern**: `scan-results/{userId}/{scanId}.{xml|json}`
+- **Signed URLs**: v4, 7-day expiration
+
+## Deployment
+
+See `gcp/functions/openvas-scanner/README.md` for:
+- SSH access instructions
+- Script update procedures
+- Docker container management
+- Monitoring and troubleshooting
+- Cost optimization tips
+
+### Quick Update
+```bash
+# Upload script
+gcloud compute scp gcp/functions/openvas-scanner/run_openvas_scan.py \
+  openvas-scanner-vm:/tmp/run_openvas_scan.py --zone=us-central1-a
+
+# Install on VM
+gcloud compute ssh openvas-scanner-vm --zone=us-central1-a --command='
+  sudo mv /tmp/run_openvas_scan.py /home/hackeranalytics0/run_openvas_scan.py &&
+  sudo chown hackeranalytics0:hackeranalytics0 /home/hackeranalytics0/run_openvas_scan.py &&
+  sudo chmod 755 /home/hackeranalytics0/run_openvas_scan.py
+'
+```
+
+## Known Issues & Solutions
+
+### Issue: GVM Socket Authentication
+**Solution**: Use gvm-cli with `--gmp-username` and `--gmp-password` flags
+
+### Issue: Limited Report Results (10 rows)
+**Solution**: Use `get_reports` (plural) with `filter='rows=-1'` to get all results
+
+### Issue: Webhook 401 Errors
+**Solution**: Ensure webhook handler accepts `x-webhook-secret` header (in addition to `x-gcp-webhook-secret`)
+
+## Monitoring
+
+### Check API Server
+```bash
+gcloud compute ssh openvas-scanner-vm --zone=us-central1-a \
+  --command='ps aux | grep openvas_api_server'
+```
+
+### View Scan Logs
+```bash
+gcloud compute ssh openvas-scanner-vm --zone=us-central1-a \
+  --command='sudo ls -lt /home/hackeranalytics0/scan_*.log | head -5'
+```
+
+### Docker Container Status
+```bash
+gcloud compute ssh openvas-scanner-vm --zone=us-central1-a \
+  --command='sudo docker ps'
+```
+
+## Cost Estimation
+
+- **VM Runtime**: ~$30/month (e2-medium, 24/7)
+- **Storage**: ~$0.02/GB/month for scan results
+- **Network**: Minimal (mostly inbound scan traffic)
+
+**Optimization**: Stop VM when not actively scanning to save costs
