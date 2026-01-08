@@ -64,11 +64,24 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
     `Dispatching scan job ${job.scanId} of type '${type}' to ${functionUrl}`,
   );
 
+  // Transform job payload based on scanner type
+  // ZAP expects 'webhookUrl' instead of 'callbackUrl'
+  const payload =
+    type === "zap"
+      ? {
+          scanId: job.scanId,
+          userId: job.userId,
+          target: job.target,
+          scanType: job.options?.scanProfile || "active",
+          webhookUrl: job.callbackUrl,
+        }
+      : job;
+
   // Fire-and-forget: don't await the fetch so the API returns immediately
   fetch(functionUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(job),
+    body: JSON.stringify(payload),
   })
     .then(async (resp) => {
       if (!resp.ok) {
