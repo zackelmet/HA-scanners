@@ -53,6 +53,9 @@ export async function POST(request: NextRequest) {
     const body: CreateScanRequest = await request.json();
     const { type, target, options } = body;
 
+    // Debug logging
+    console.log("Scan request received:", { userId, type, target, options });
+
     // Normalize options (client may send empty string or null)
     const normalizedOptions =
       options == null
@@ -63,6 +66,10 @@ export async function POST(request: NextRequest) {
 
     // Validate input (options are optional)
     if (!type || !target) {
+      console.log("Validation failed: Missing type or target", {
+        type,
+        target,
+      });
       return NextResponse.json(
         { error: "Missing required fields: type, target" },
         { status: 400 },
@@ -76,6 +83,7 @@ export async function POST(request: NextRequest) {
       type !== "nikto" &&
       type !== "zap"
     ) {
+      console.log("Invalid scan type:", type);
       return NextResponse.json(
         {
           error:
@@ -90,6 +98,7 @@ export async function POST(request: NextRequest) {
       // ZAP requires full URLs with protocol
       const urlPattern = /^https?:\/\/.+/i;
       if (!urlPattern.test(target)) {
+        console.log("Invalid ZAP target format:", target);
         return NextResponse.json(
           {
             error:
@@ -103,6 +112,7 @@ export async function POST(request: NextRequest) {
       const targetPattern =
         /^(?:(?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)$/;
       if (!targetPattern.test(target)) {
+        console.log("Invalid network scanner target format:", target);
         return NextResponse.json(
           {
             error:
