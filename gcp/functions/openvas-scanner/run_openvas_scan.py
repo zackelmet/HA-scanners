@@ -48,6 +48,42 @@ def run_gvm_cli(xml_command: str) -> str:
         raise
 
 
+def run_nmap_scan(target: str) -> dict:
+    """Run Nmap to discover open ports before OpenVAS scan."""
+    print(f"Running Nmap port scan on {target}...")
+    try:
+        # Run Nmap with common web/service ports
+        result = subprocess.run(
+            ["nmap", "-p", "21-23,25,53,80,110-111,135,139,143,443,445,993,995,1723,3306,3389,5900,8080,8443", 
+             "-T4", "-Pn", "--open", "-oX", "-", target],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=300
+        )
+        
+        # Parse Nmap XML output
+        root = ET.fromstring(result.stdout)
+        
+        ports = []
+        for host in root.findall(".//host"):
+            for port in host.findall(".//port[@protocol='tcp']"):
+                state = port.find("state")
+                if state is not None and state.get("state") == "open":
+                    port_id = port.get("portid")
+                    ports.append(port_id)
+        
+        print(f"Nmap found {len(ports)} open ports: {','.join(ports)}")
+        return {"ports": ports, "target": target}
+        
+    except subprocess.TimeoutExpired:
+        print("Nmap scan timed out, proceeding with default ports")
+        return {"ports": ["80", "443"], "target": target}
+    except Exception as e:
+        print(f"Nmap scan failed: {e}, proceeding with default ports")
+        return {"ports": ["80", "443"], "target": target}
+
+
 def create_target(name: str, hosts: str) -> str:
     """Create or get existing target and return its ID."""
     # Check if target exists
@@ -61,12 +97,36 @@ def create_target(name: str, hosts: str) -> str:
         print(f"Using existing target ID: {target_id}")
         return target_id
     
-    # Create new target
+    # Run Nmap scan first to discover open ports
+    nmap_results = run_nmap_scan(hosts)
+    open_ports = nmap_results["ports"]
+    
+    if not open_ports:
+        print("No open ports found, using default web ports")
+        open_ports = ["80", "443"]
+    
+    # Create a custom port list with discovered ports
+    port_list_name = f"Ports for {name}"
+    port_range = ",".join([f"T:{p}" for p in open_ports])  # T: prefix for TCP ports
+    
+    create_port_list_xml = f"""<create_port_list>
+        <name>{port_list_name}</name>
+        <port_range>{port_range}</port_range>
+    </create_port_list>"""
+    
+    print(f"Creating port list with range: {port_range}")
+    port_list_response = run_gvm_cli(create_port_list_xml)
+    port_list_root = ET.fromstring(port_list_response)
+    custom_port_list_id = port_list_root.get("id")
+    print(f"Created port list ID: {custom_port_list_id}")
+    
+    # Create new target with "Consider Alive" and custom port list
     print(f"Creating target {name}...")
     create_target_xml = f"""<create_target>
         <name>{name}</name>
         <hosts>{hosts}</hosts>
-        <port_list id='{PORT_LIST_ID}'/>
+        <port_list id='{custom_port_list_id}'/>
+        <alive_tests>Consider Alive</alive_tests>
     </create_target>"""
     
     response = run_gvm_cli(create_target_xml)
@@ -125,14 +185,15 @@ def wait_for_completion(task_id: str, timeout_minutes: int = 30):
 
 
 def get_report_id(task_id: str) -> str:
-    """Get the report ID for a completed task."""
-    get_reports_xml = f"<get_reports task_id='{task_id}'/>"
-    response = run_gvm_cli(get_reports_xml)
+    """Get the report ID for a completed task from last_report."""
+    get_tasks_xml = f"<get_tasks task_id='{task_id}' details='1'/>"
+    response = run_gvm_cli(get_tasks_xml)
     root = ET.fromstring(response)
     
-    report_element = root.find(".//report")
+    # Get report ID from last_report element
+    report_element = root.find(".//last_report/report")
     if report_element is None:
-        raise RuntimeError("Could not find report element")
+        raise RuntimeError("Could not find last_report/report element")
     
     report_id = report_element.get("id")
     return report_id

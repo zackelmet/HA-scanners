@@ -31,11 +31,13 @@ export interface UserDocument {
     nmap: number;
     openvas: number;
     nikto: number;
+    zap: number;
   };
   scannersUsedThisMonth?: {
     nmap: number;
     openvas: number;
     nikto: number;
+    zap: number;
   };
   scansThisMonth: number; // legacy counter (kept for compatibility) that resets monthly
   totalScansAllTime: number; // Lifetime counter
@@ -62,7 +64,7 @@ export interface UserDocument {
 
 export interface ScanMetadata {
   scanId: string;
-  type: "nmap" | "openvas" | "nikto";
+  type: "nmap" | "openvas" | "nikto" | "zap";
   target: string;
   status: "queued" | "running" | "completed" | "failed";
   startTime: Timestamp;
@@ -81,7 +83,7 @@ export const PLAN_LIMITS = {
   free: {
     tier: "free" as PlanTier,
     monthlyScans: 0, // Free users can't scan
-    scanners: { nmap: 0, openvas: 0, nikto: 0 },
+    scanners: { nmap: 0, openvas: 0, nikto: 0, zap: 0 },
     features: {
       nmapEnabled: false,
       openvasEnabled: false,
@@ -93,7 +95,7 @@ export const PLAN_LIMITS = {
   essential: {
     tier: "essential" as PlanTier,
     monthlyScans: 500,
-    scanners: { nmap: 1920, openvas: 240, nikto: 60 },
+    scanners: { nmap: 1920, openvas: 240, nikto: 60, zap: 240 },
     features: {
       nmapEnabled: true,
       openvasEnabled: false,
@@ -105,7 +107,7 @@ export const PLAN_LIMITS = {
   pro: {
     tier: "pro" as PlanTier,
     monthlyScans: 2500,
-    scanners: { nmap: 15360, openvas: 1920, nikto: 300 },
+    scanners: { nmap: 15360, openvas: 1920, nikto: 300, zap: 1920 },
     features: {
       nmapEnabled: true,
       openvasEnabled: true,
@@ -117,7 +119,7 @@ export const PLAN_LIMITS = {
   scale: {
     tier: "scale" as PlanTier,
     monthlyScans: 10000,
-    scanners: { nmap: 122880, openvas: 7680, nikto: 1500 },
+    scanners: { nmap: 122880, openvas: 7680, nikto: 1500, zap: 7680 },
     features: {
       nmapEnabled: true,
       openvasEnabled: true,

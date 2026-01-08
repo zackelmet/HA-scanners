@@ -70,9 +70,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate scan type
-    if (type !== "nmap" && type !== "openvas" && type !== "nikto") {
+    if (
+      type !== "nmap" &&
+      type !== "openvas" &&
+      type !== "nikto" &&
+      type !== "zap"
+    ) {
       return NextResponse.json(
-        { error: "Invalid scan type. Must be 'nmap', 'openvas', or 'nikto'" },
+        {
+          error:
+            "Invalid scan type. Must be 'nmap', 'openvas', 'nikto', or 'zap'",
+        },
         { status: 400 },
       );
     }
@@ -126,7 +134,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Enforce per-scanner monthly limits
-    const scanner = type as "nmap" | "openvas" | "nikto";
+    const scanner = type as "nmap" | "openvas" | "nikto" | "zap";
 
     // Determine user's scanner limits (fall back to plan defaults)
     const userScannerLimits = userData.scannerLimits || planLimits.scanners;

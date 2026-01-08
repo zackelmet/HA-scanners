@@ -1,7 +1,7 @@
 export interface ScanJob {
   scanId: string;
   userId: string;
-  type: "nmap" | "openvas" | "nikto";
+  type: "nmap" | "openvas" | "nikto" | "zap";
   target: string;
   options?: any;
   callbackUrl: string;
@@ -25,6 +25,9 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
     case "openvas":
       // Placeholder for OpenVAS scanner URL
       functionUrl = process.env.GCP_OPENVAS_SCANNER_URL || "";
+      break;
+    case "zap":
+      functionUrl = process.env.GCP_ZAP_SCANNER_URL || "";
       break;
     default:
       console.error(`Unsupported scan type: ${type}`);

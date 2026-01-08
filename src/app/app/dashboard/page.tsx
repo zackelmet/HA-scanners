@@ -19,7 +19,12 @@ type TabKey = "newScan" | "history";
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("history");
-  const [scannerType, setScannerType] = useState<"nmap" | "openvas">("nmap");
+  const [scannerType, setScannerType] = useState<"nmap" | "openvas" | "zap">(
+    "nmap",
+  );
+  const [zapProfile, setZapProfile] = useState<"quick" | "active" | "full">(
+    "active",
+  );
   const [targetInput, setTargetInput] = useState("");
   const [serviceDetection, setServiceDetection] = useState(true);
   const [osDetection, setOsDetection] = useState(false);
@@ -42,9 +47,14 @@ export default function DashboardPage() {
     return Math.max(0, remaining);
   }, [userData]);
 
-  const scannerRemaining = (scanner: "nmap" | "openvas" | "nikto") => {
+  const scannerRemaining = (scanner: "nmap" | "openvas" | "nikto" | "zap") => {
     if (!userData) return 0;
-    const limits = userData.scannerLimits || { nmap: 0, openvas: 0, nikto: 0 };
+    const limits = userData.scannerLimits || {
+      nmap: 0,
+      openvas: 0,
+      nikto: 0,
+      zap: 0,
+    };
     const used =
       (userData.scannersUsedThisMonth &&
         userData.scannersUsedThisMonth[scanner]) ||
@@ -202,7 +212,7 @@ export default function DashboardPage() {
                   {userData?.currentPlan?.toUpperCase()} Plan Active
                 </h3>
                 <p className="text-sm neon-subtle">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                     <div>
                       <strong>nmap scans used:</strong>{" "}
                       {userData?.scannersUsedThisMonth?.nmap ?? 0}/{" "}
@@ -219,6 +229,11 @@ export default function DashboardPage() {
                       <strong>nikto scans used:</strong>{" "}
                       {userData?.scannersUsedThisMonth?.nikto ?? 0}/{" "}
                       {userData?.scannerLimits?.nikto ?? 0}
+                    </div>
+                    <div>
+                      <strong>zap scans used:</strong>{" "}
+                      {userData?.scannersUsedThisMonth?.zap ?? 0}/{" "}
+                      {userData?.scannerLimits?.zap ?? 0}
                     </div>
                   </div>
                 </p>
@@ -303,6 +318,10 @@ export default function DashboardPage() {
                         topPorts: 100,
                       };
 
+                      const zapOptions = {
+                        scanProfile: zapProfile,
+                      };
+
                       const res = await fetch("/api/scans", {
                         method: "POST",
                         headers: {
@@ -312,7 +331,12 @@ export default function DashboardPage() {
                         body: JSON.stringify({
                           type: scannerType,
                           target: targetInput,
-                          options: scannerType === "nmap" ? nmapOptions : {},
+                          options:
+                            scannerType === "nmap"
+                              ? nmapOptions
+                              : scannerType === "zap"
+                                ? zapOptions
+                                : {},
                         }),
                       });
 
@@ -342,23 +366,34 @@ export default function DashboardPage() {
                         className="neon-input w-full py-3"
                         value={scannerType}
                         onChange={(e) =>
-                          setScannerType(e.target.value as "nmap" | "openvas")
+                          setScannerType(
+                            e.target.value as "nmap" | "openvas" | "zap",
+                          )
                         }
                       >
                         <option value="nmap">Nmap - Network Scanner</option>
                         <option value="openvas">
                           OpenVAS - Vulnerability Assessment
                         </option>
+                        <option value="zap">
+                          OWASP ZAP - Web Application Scanner
+                        </option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold mb-2 text-[var(--text)]">
-                        Target IP/Domain
+                        {scannerType === "zap"
+                          ? "Target URL"
+                          : "Target IP/Domain"}
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g., 192.168.1.1 or example.com"
+                        placeholder={
+                          scannerType === "zap"
+                            ? "e.g., https://example.com or http://192.168.1.1:8080"
+                            : "e.g., 192.168.1.1 or example.com"
+                        }
                         className="neon-input w-full py-3"
                         value={targetInput}
                         onChange={(e) => setTargetInput(e.target.value)}
@@ -384,6 +419,42 @@ export default function DashboardPage() {
                         <div className="text-sm neon-subtle">
                           Scans perform port enumeration (top 100 ports) and
                           service/version detection (-sV -sC) by default.
+                        </div>
+                      </div>
+                    )}
+
+                    {scannerType === "zap" && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-semibold mb-2 text-[var(--text)]">
+                            Scan Profile
+                          </label>
+                          <select
+                            className="neon-input w-full py-3"
+                            value={zapProfile}
+                            onChange={(e) =>
+                              setZapProfile(
+                                e.target.value as "quick" | "active" | "full",
+                              )
+                            }
+                          >
+                            <option value="quick">
+                              Quick - Spider only (passive)
+                            </option>
+                            <option value="active">
+                              Active - Spider + active scan (recommended)
+                            </option>
+                            <option value="full">
+                              Full - AJAX spider + active scan (thorough)
+                            </option>
+                          </select>
+                        </div>
+
+                        <div className="text-sm neon-subtle">
+                          <strong>Target must be a full URL</strong> (e.g.,
+                          http://example.com or https://example.com). ZAP scans
+                          web applications for vulnerabilities like XSS, SQL
+                          injection, and security misconfigurations.
                         </div>
                       </div>
                     )}

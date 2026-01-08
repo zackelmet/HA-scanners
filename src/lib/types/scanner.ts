@@ -1,6 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 
-export type ScanType = "nmap" | "openvas" | "nikto";
+export type ScanType = "nmap" | "openvas" | "nikto" | "zap";
 export type ScanStatus =
   | "queued"
   | "running"
@@ -15,7 +15,7 @@ export interface Scan {
   type: ScanType;
   status: ScanStatus;
   target: string;
-  options: NmapOptions | OpenVASOptions;
+  options: NmapOptions | OpenVASOptions | ZapOptions;
   createdAt: Timestamp;
   startedAt?: Timestamp;
   completedAt?: Timestamp;
@@ -41,6 +41,11 @@ export interface OpenVASOptions {
 
 export interface NiktoOptions {
   template?: string;
+}
+
+export interface ZapOptions {
+  scanProfile: "quick" | "active" | "full";
+  scanType?: "quick" | "active" | "full"; // legacy alias
 }
 
 export interface ScanResult {
@@ -109,7 +114,7 @@ export interface ScanSummary {
 export interface CreateScanRequest {
   type: ScanType;
   target: string;
-  options: NmapOptions | OpenVASOptions | NiktoOptions;
+  options: NmapOptions | OpenVASOptions | NiktoOptions | ZapOptions;
 }
 
 export interface ScanQueue {
