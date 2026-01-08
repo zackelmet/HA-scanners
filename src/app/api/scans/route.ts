@@ -85,16 +85,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Basic target validation (IP or domain)
-    const targetPattern =
-      /^(?:(?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)$/;
-    if (!targetPattern.test(target)) {
-      return NextResponse.json(
-        {
-          error: "Invalid target format. Must be a valid IP address or domain",
-        },
-        { status: 400 },
-      );
+    // Basic target validation (IP/domain for network scanners, URL for ZAP)
+    if (type === "zap") {
+      // ZAP requires full URLs with protocol
+      const urlPattern = /^https?:\/\/.+/i;
+      if (!urlPattern.test(target)) {
+        return NextResponse.json(
+          {
+            error:
+              "Invalid target format. ZAP requires a full URL (e.g., http://example.com or https://example.com)",
+          },
+          { status: 400 },
+        );
+      }
+    } else {
+      // Other scanners use IP or domain
+      const targetPattern =
+        /^(?:(?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)$/;
+      if (!targetPattern.test(target)) {
+        return NextResponse.json(
+          {
+            error:
+              "Invalid target format. Must be a valid IP address or domain",
+          },
+          { status: 400 },
+        );
+      }
     }
 
     // Check user's subscription status
