@@ -28,21 +28,45 @@ def log(message):
     """Log with timestamp"""
     print(f"[{datetime.now().isoformat()}] {message}", flush=True)
 
-def run_zap_scan(target_url: str, scan_type: str = 'active') -> dict:
+def run_zap_scan(target_url: str, scan_type: str = 'active', max_duration_minutes: int = 30) -> dict:
     """
     Run ZAP scan on target URL
     
     Args:
         target_url: Target URL to scan (must include http:// or https://)
         scan_type: 'quick' (spider only), 'active' (spider + active scan), or 'full' (ajax spider + active)
+        max_duration_minutes: Maximum scan duration in minutes (default: 30)
     
     Returns:
         dict: Scan results and statistics
     """
-    log(f"Starting ZAP {scan_type} scan on {target_url}")
+    log(f"Starting ZAP {scan_type} scan on {target_url} (max duration: {max_duration_minutes} minutes)")
+    scan_start_time = datetime.now()
     
     # Initialize ZAP API
     zap = ZAPv2(apikey=ZAP_API_KEY, proxies=ZAP_PROXY)
+    
+    # Configure scan policies based on scan type
+    if scan_type == 'quick':
+        # Quick scan: spider only, no active scanning
+        pass
+    elif scan_type == 'active':
+        # Active scan: configure for reasonable performance
+        # Set max scan duration per host
+        zap.ascan.set_option_max_scan_duration_in_mins(str(max_duration_minutes - 15))
+        # Set thread count for parallel scanning
+        zap.ascan.set_option_thread_per_host('5')
+        # Limit rules to essential checks (skip slow/unreliable tests)
+        zap.ascan.set_option_attack_strength('MEDIUM')  # LOW, MEDIUM, HIGH, INSANE
+        zap.ascan.set_option_alert_threshold('MEDIUM')  # OFF, LOW, MEDIUM, HIGH
+    elif scan_type == 'full':
+        # Full scan: more thorough but still bounded
+        zap.ascan.set_option_max_scan_duration_in_mins(str(max_duration_minutes - 20))
+        zap.ascan.set_option_thread_per_host('10')
+        zap.ascan.set_option_attack_strength('HIGH')
+        zap.ascan.set_option_alert_threshold('LOW')
+    
+    log(f"Scan policy configured for {scan_type} scan")
     
     # Access the target to initialize session
     log(f"Accessing target URL...")
@@ -53,7 +77,14 @@ def run_zap_scan(target_url: str, scan_type: str = 'active') -> dict:
     log("Starting spider scan...")
     scan_id = zap.spider.scan(target_url)
     
+    spider_start = datetime.now()
+    max_spider_time = timedelta(minutes=10)  # Spider shouldn't take more than 10 minutes
+    
     while int(zap.spider.status(scan_id)) < 100:
+        if datetime.now() - spider_start > max_spider_time:
+            log(f"Spider timeout after 10 minutes, stopping...")
+            zap.spider.stop(scan_id)
+            break
         progress = zap.spider.status(scan_id)
         log(f"Spider progress: {progress}%")
         time.sleep(5)
