@@ -14,7 +14,7 @@ export default function Home() {
       features: [
         "Nmap (Network): 1,920 IPs / month",
         "OpenVAS (Vuln): 240 IPs / month",
-        "Nikto (Web): 60 URLs / month",
+
         "OWASP ZAP (Web App): 240 URLs / month",
         "Email support",
         "Data retention: 30 days",
@@ -28,7 +28,7 @@ export default function Home() {
       features: [
         "Nmap (Network): 15,360 IPs / month",
         "OpenVAS (Vuln): 1,920 IPs / month",
-        "Nikto (Web): 300 URLs / month",
+
         "OWASP ZAP (Web App): 1,920 URLs / month",
         "Priority support",
         "CSV/JSON export: Export scan data as CSV or JSON for external analysis",
@@ -44,7 +44,7 @@ export default function Home() {
       features: [
         "Nmap (Network): 122,880 IPs / month",
         "OpenVAS (Vuln): 7,680 IPs / month",
-        "Nikto (Web): 1,500 URLs / month",
+
         "OWASP ZAP (Web App): 7,680 URLs / month",
         "24/7 dedicated support",
         "Unlimited Data Retention: Never delete scan history",

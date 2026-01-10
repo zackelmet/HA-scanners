@@ -9,13 +9,134 @@ This document details the integration of OWASP ZAP (Zed Attack Proxy) web applic
 - **VM**: `zap-scanner-vm` at `34.70.212.39:5000`
 - **Zone**: `us-central1-a`
 - **Machine Type**: `e2-standard-2` (2 vCPUs, 8 GB RAM)
-- **ZAP Version**: 2.17.0 (Docker container)
-- **API Framework**: Flask (Python)
+- **OS**: Ubuntu 22.04 LTS
+- **ZAP Version**: 2.17.0 (Docker container `ghcr.io/zaproxy/zaproxy:stable`)
+- **API Framework**: Flask (Python 3.10)
 - **Storage**: Google Cloud Storage bucket `hacker-analytics-zap-reports`
+- **Service Account**: `/home/zapuser/gcs-key.json`
 
 ### Integration Flow
 ```
-User Dashboard → Next.js API Route → ZAP VM Flask API → ZAP Container → Scan Execution → GCS Upload → Webhook Callback → Firestore Update
+User Dashboard → Next.js API Route → scannerClient.enqueueScanJob → ZAP VM Flask API → run_zap_scan.py → ZAP Container → Scan Execution → GCS Upload → Webhook Callback → Firestore Update → UI Refresh
+```
+
+## Scan Job Payload
+
+The ZAP scanner expects the following JSON payload format (transformed by `scannerClient.ts`):
+
+```json
+{
+  "scanId": "unique-scan-id",
+  "userId": "firebase-user-id",
+  "target": "http://example.com",
+  "scanType": "quick",
+  "webhookUrl": "https://ha-scanners.vercel.app/api/scans/webhook"
+}
+```
+
+### Scan Types
+
+1. **Quick Scan** (`scanType: "quick"`)
+   - Spider only + passive scanning
+   - No active vulnerability testing
+   - Timeout: 5 minutes (no timeout needed, completes in 2-3 min)
+   - Best for: Fast reconnaissance, discovering endpoints
+
+2. **Active Scan** (`scanType: "active"`)
+   - Spider + passive + active vulnerability testing
+   - ~50 vulnerability test plugins enabled
+   - Timeout: 15 minutes
+   - Best for: Standard security assessment
+
+3. **Full Scan** (`scanType: "full"`)
+   - AJAX spider + regular spider + passive + active
+   - More thorough crawling of JavaScript-heavy apps
+   - Timeout: 20 minutes
+   - Best for: Comprehensive assessment of modern web apps
+
+### Scan Configuration
+
+**Thread Limits:**
+- Active: 5 threads per host
+- Full: 10 threads per host
+
+**Disabled Plugins** (to prevent hangs on large apps):
+- `40026` - Cross Site Scripting (DOM Based) - generates 1M+ requests
+- `10104` - User Agent Fuzzer - generates 100K+ requests
+- `40017` - Cross Site Scripting (Persistent) - Spider
+- `40045` - Spring4Shell - very slow
+- `40043` - Log4Shell - requires OAST service
+- `50000` - Script Active Scan Rules - custom scripts
+
+## Webhook Response
+
+Upon scan completion, the scanner sends a POST request to the webhook URL with the following payload:
+
+```json
+{
+  "scanId": "unique-scan-id",
+  "userId": "firebase-user-id",
+  "scannerType": "zap",
+  "status": "completed",
+  "timestamp": "2026-01-09T20:24:00.887144",
+  "resultsSummary": {
+    "target": "http://testphp.vulnweb.com",
+    "total_alerts": 690,
+    "high": 80,
+    "medium": 139,
+    "low": 198,
+    "info": 273
+  },
+  "gcpSignedUrl": "https://storage.googleapis.com/hacker-analytics-zap-reports/...",
+  "gcpSignedUrlExpires": "2026-01-16T20:24:00.887138",
+  "gcpReportSignedUrl": "https://storage.googleapis.com/hacker-analytics-zap-reports/...",
+  "gcpReportSignedUrlExpires": "2026-01-16T20:24:00.887138",
+  "reports": {
+    "html": "https://storage.googleapis.com/...",
+    "json": "https://storage.googleapis.com/...",
+    "xml": "https://storage.googleapis.com/..."
+  }
+}
+```
+
+### Webhook Headers
+
+```
+Content-Type: application/json
+X-Webhook-Secret: <GCP_WEBHOOK_SECRET>
+```
+
+### Report Files
+
+All reports are uploaded to GCS with 7-day signed URLs:
+
+1. **HTML Report** (`gcpReportSignedUrl`) - Human-readable report with detailed findings
+2. **JSON Report** (`gcpSignedUrl`) - Machine-readable data for programmatic access
+3. **XML Report** (`reports.xml`) - Alternative structured format
+
+### Firestore Fields Updated
+
+The webhook handler updates the following fields in Firestore:
+
+```typescript
+{
+  status: "completed",
+  endTime: Timestamp,
+  resultsSummary: {
+    target: string,
+    total_alerts: number,
+    high: number,
+    medium: number,
+    low: number,
+    info: number
+  },
+  gcpSignedUrl: string,              // JSON report URL
+  gcpSignedUrlExpires: string,        // ISO timestamp
+  gcpReportSignedUrl: string,         // HTML report URL
+  gcpReportSignedUrlExpires: string,  // ISO timestamp
+  scannerType: "zap",
+  updatedAt: FieldValue.serverTimestamp()
+}
 ```
 
 ## Files Changed
@@ -113,7 +234,7 @@ const scanner = scannerType as "nmap" | "openvas" | "nikto" | "zap";
 ### Scanner Client
 
 #### `src/lib/gcp/scannerClient.ts`
-Added ZAP scanner URL routing:
+Added ZAP scanner URL routing and payload transformation:
 
 ```typescript
 export interface ScanJob {
@@ -146,7 +267,23 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
       throw new Error(`Unsupported scan type: ${type}`);
   }
   
-  // ... rest of function
+  // Transform payload for ZAP scanner (different field names)
+  const payload = type === "zap" 
+    ? {
+        scanId: job.scanId,
+        userId: job.userId,
+        target: job.target,
+        scanType: job.options?.scanProfile || "active",
+        webhookUrl: job.callbackUrl,
+      }
+    : job;
+  
+  const response = await fetch(functionUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  // ...
 }
 ```
 

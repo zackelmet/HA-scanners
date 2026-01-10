@@ -40,16 +40,16 @@ const db = admin.firestore();
 // Plan limits (should match src/lib/types/user.ts)
 const PLAN_LIMITS = {
   free: {
-    scanners: { nmap: 0, openvas: 0, nikto: 0, zap: 0 },
+    scanners: { nmap: 0, openvas: 0, zap: 0 },
   },
   essential: {
-    scanners: { nmap: 1920, openvas: 240, nikto: 60, zap: 240 },
+    scanners: { nmap: 1920, openvas: 240, zap: 240 },
   },
   pro: {
-    scanners: { nmap: 15360, openvas: 1920, nikto: 300, zap: 1920 },
+    scanners: { nmap: 15360, openvas: 1920, zap: 1920 },
   },
   scale: {
-    scanners: { nmap: 122880, openvas: 7680, nikto: 1500, zap: 7680 },
+    scanners: { nmap: 122880, openvas: 7680, zap: 7680 },
   },
 };
 

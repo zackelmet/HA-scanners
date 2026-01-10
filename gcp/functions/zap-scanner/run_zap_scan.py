@@ -12,6 +12,7 @@ import argparse
 import requests
 from datetime import datetime, timedelta
 from google.cloud import storage
+from google.oauth2 import service_account
 from zapv2 import ZAPv2
 
 # ZAP Configuration
@@ -20,6 +21,7 @@ ZAP_PROXY = {'http': 'http://localhost:8080', 'https': 'http://localhost:8080'}
 
 # GCS Configuration
 GCS_BUCKET = 'hacker-analytics-zap-reports'
+SERVICE_ACCOUNT_KEY = "/home/zapuser/gcs-key.json"
 
 # Webhook Configuration
 WEBHOOK_SECRET = os.environ.get('GCP_WEBHOOK_SECRET', 'your-webhook-secret-key')
@@ -28,18 +30,25 @@ def log(message):
     """Log with timestamp"""
     print(f"[{datetime.now().isoformat()}] {message}", flush=True)
 
-def run_zap_scan(target_url: str, scan_type: str = 'active', max_duration_minutes: int = 30) -> dict:
+def run_zap_scan(target_url: str, scan_type: str = 'active') -> dict:
     """
     Run ZAP scan on target URL
     
     Args:
         target_url: Target URL to scan (must include http:// or https://)
         scan_type: 'quick' (spider only), 'active' (spider + active scan), or 'full' (ajax spider + active)
-        max_duration_minutes: Maximum scan duration in minutes (default: 30)
     
     Returns:
         dict: Scan results and statistics
     """
+    # Set appropriate timeout based on scan type
+    timeout_config = {
+        'quick': 5,    # Quick scans: 5 minutes (spider + passive only)
+        'active': 15,  # Active scans: 15 minutes (spider + passive + active)
+        'full': 20     # Full scans: 20 minutes (ajax + spider + passive + active)
+    }
+    max_duration_minutes = timeout_config.get(scan_type, 15)
+    
     log(f"Starting ZAP {scan_type} scan on {target_url} (max duration: {max_duration_minutes} minutes)")
     scan_start_time = datetime.now()
     
@@ -52,21 +61,37 @@ def run_zap_scan(target_url: str, scan_type: str = 'active', max_duration_minute
         pass
     elif scan_type == 'active':
         # Active scan: configure for reasonable performance
-        # Set max scan duration per host
-        zap.ascan.set_option_max_scan_duration_in_mins(str(max_duration_minutes - 15))
-        # Set thread count for parallel scanning
-        zap.ascan.set_option_thread_per_host('5')
-        # Limit rules to essential checks (skip slow/unreliable tests)
-        zap.ascan.set_option_attack_strength('MEDIUM')  # LOW, MEDIUM, HIGH, INSANE
-        zap.ascan.set_option_alert_threshold('MEDIUM')  # OFF, LOW, MEDIUM, HIGH
+        try:
+            zap.ascan.set_option_thread_per_host('5')
+            
+            # Disable expensive/slow plugins that cause hangs
+            # These plugins generate too many requests or are unreliable
+            expensive_plugins = [
+                '40026',  # Cross Site Scripting (DOM Based) - generates 1M+ requests
+                '10104',  # User Agent Fuzzer - generates 100K+ requests  
+                '40017',  # Cross Site Scripting (Persistent) - Spider
+                '40045',  # Spring4Shell - very slow
+                '40043',  # Log4Shell - requires OAST service
+                '50000',  # Script Active Scan Rules - custom scripts
+            ]
+            
+            for plugin_id in expensive_plugins:
+                try:
+                    zap.ascan.set_scanner_alert_threshold(plugin_id, 'OFF')
+                    log(f"Disabled plugin {plugin_id}")
+                except:
+                    pass
+            
+            log(f"Active scan configured: 5 threads, expensive plugins disabled")
+        except Exception as e:
+            log(f"Warning: Could not set scan options: {e}")
     elif scan_type == 'full':
-        # Full scan: more thorough but still bounded
-        zap.ascan.set_option_max_scan_duration_in_mins(str(max_duration_minutes - 20))
-        zap.ascan.set_option_thread_per_host('10')
-        zap.ascan.set_option_attack_strength('HIGH')
-        zap.ascan.set_option_alert_threshold('LOW')
-    
-    log(f"Scan policy configured for {scan_type} scan")
+        # Full scan: more thorough but still with limits
+        try:
+            zap.ascan.set_option_thread_per_host('10')
+            log(f"Full scan configured: 10 threads per host")
+        except Exception as e:
+            log(f"Warning: Could not set scan options: {e}")
     
     # Access the target to initialize session
     log(f"Accessing target URL...")
@@ -77,17 +102,25 @@ def run_zap_scan(target_url: str, scan_type: str = 'active', max_duration_minute
     log("Starting spider scan...")
     scan_id = zap.spider.scan(target_url)
     
-    spider_start = datetime.now()
-    max_spider_time = timedelta(minutes=10)  # Spider shouldn't take more than 10 minutes
-    
-    while int(zap.spider.status(scan_id)) < 100:
-        if datetime.now() - spider_start > max_spider_time:
-            log(f"Spider timeout after 10 minutes, stopping...")
-            zap.spider.stop(scan_id)
-            break
-        progress = zap.spider.status(scan_id)
-        log(f"Spider progress: {progress}%")
-        time.sleep(5)
+    # Only apply spider timeout for active/full scans (quick scans are fast)
+    if scan_type in ['active', 'full']:
+        spider_start = datetime.now()
+        max_spider_time = timedelta(minutes=10)
+        
+        while int(zap.spider.status(scan_id)) < 100:
+            if datetime.now() - spider_start > max_spider_time:
+                log(f"Spider timeout after 10 minutes, stopping...")
+                zap.spider.stop(scan_id)
+                break
+            progress = zap.spider.status(scan_id)
+            log(f"Spider progress: {progress}%")
+            time.sleep(5)
+    else:
+        # Quick scan - no timeout, completes quickly
+        while int(zap.spider.status(scan_id)) < 100:
+            progress = zap.spider.status(scan_id)
+            log(f"Spider progress: {progress}%")
+            time.sleep(5)
     
     log("Spider scan completed")
     
@@ -120,7 +153,19 @@ def run_zap_scan(target_url: str, scan_type: str = 'active', max_duration_minute
         log("Starting active scan...")
         scan_id = zap.ascan.scan(target_url)
         
+        # Set timeout based on scan type
+        active_timeout_mins = 15 if scan_type == 'active' else 10
+        active_start = datetime.now()
+        max_active_time = timedelta(minutes=active_timeout_mins)
+        
         while int(zap.ascan.status(scan_id)) < 100:
+            # Check timeout
+            if datetime.now() - active_start > max_active_time:
+                log(f"Active scan timeout after {active_timeout_mins} minutes, stopping...")
+                zap.ascan.stop(scan_id)
+                time.sleep(5)  # Wait for scan to stop
+                break
+            
             progress = zap.ascan.status(scan_id)
             log(f"Active scan progress: {progress}%")
             time.sleep(10)
@@ -202,7 +247,10 @@ def upload_to_gcs(scan_id: str, user_id: str, report_files: dict) -> dict:
     """Upload scan reports to Google Cloud Storage"""
     log("Uploading reports to GCS...")
     
-    storage_client = storage.Client()
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_KEY
+    )
+    storage_client = storage.Client(credentials=credentials)
     bucket = storage_client.bucket(GCS_BUCKET)
     
     uploaded_urls = {}
@@ -214,10 +262,14 @@ def upload_to_gcs(scan_id: str, user_id: str, report_files: dict) -> dict:
         blob.upload_from_filename(f"/tmp/{filename}")
         
         # Generate signed URL (valid for 7 days)
+        credentials = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_KEY
+        )
         url = blob.generate_signed_url(
             version="v4",
             expiration=timedelta(days=7),
-            method="GET"
+            method="GET",
+            credentials=credentials
         )
         
         uploaded_urls[report_type] = url
@@ -229,20 +281,30 @@ def send_webhook(webhook_url: str, scan_id: str, user_id: str, results: dict, re
     """Send webhook notification with scan results"""
     log(f"Sending webhook to {webhook_url}")
     
+    # Calculate expiry (7 days from now to match signed URL expiration)
+    expires_at = datetime.now() + timedelta(days=7)
+    
     payload = {
         'scanId': scan_id,
         'userId': user_id,
-        'scanner': 'zap',
+        'scannerType': 'zap',
         'status': 'completed',
         'timestamp': datetime.now().isoformat(),
-        'target': results['target'],
-        'summary': {
+        'resultsSummary': {
+            'target': results['target'],
             'total_alerts': results['total_alerts'],
             'high': results['alerts_by_risk']['High'],
             'medium': results['alerts_by_risk']['Medium'],
             'low': results['alerts_by_risk']['Low'],
             'info': results['alerts_by_risk']['Informational']
         },
+        # Primary signed URL (JSON report)
+        'gcpSignedUrl': report_urls.get('json'),
+        'gcpSignedUrlExpires': expires_at.isoformat(),
+        # Report signed URL (HTML report)
+        'gcpReportSignedUrl': report_urls.get('html'),
+        'gcpReportSignedUrlExpires': expires_at.isoformat(),
+        # Additional reports
         'reports': report_urls
     }
     
@@ -251,12 +313,14 @@ def send_webhook(webhook_url: str, scan_id: str, user_id: str, results: dict, re
         'X-Webhook-Secret': WEBHOOK_SECRET
     }
     
+    log(f"Webhook payload: {json.dumps(payload, indent=2)}")
+    
     try:
         response = requests.post(webhook_url, json=payload, headers=headers, timeout=30)
         response.raise_for_status()
-        log(f"Webhook delivered successfully: {response.status_code}")
+        log(f"✅ Webhook delivered successfully (status: {response.status_code})")
     except Exception as e:
-        log(f"Webhook delivery failed: {e}")
+        log(f"❌ Webhook delivery failed: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description='Run OWASP ZAP vulnerability scan')

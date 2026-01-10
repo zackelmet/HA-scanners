@@ -47,12 +47,11 @@ export default function DashboardPage() {
     return Math.max(0, remaining);
   }, [userData]);
 
-  const scannerRemaining = (scanner: "nmap" | "openvas" | "nikto" | "zap") => {
+  const scannerRemaining = (scanner: "nmap" | "openvas" | "zap") => {
     if (!userData) return 0;
     const limits = userData.scannerLimits || {
       nmap: 0,
       openvas: 0,
-      nikto: 0,
       zap: 0,
     };
     const used =
@@ -224,11 +223,6 @@ export default function DashboardPage() {
                       <strong>openvas scans used:</strong>{" "}
                       {userData?.scannersUsedThisMonth?.openvas ?? 0}/{" "}
                       {userData?.scannerLimits?.openvas ?? 0}
-                    </div>
-                    <div>
-                      <strong>nikto scans used:</strong>{" "}
-                      {userData?.scannersUsedThisMonth?.nikto ?? 0}/{" "}
-                      {userData?.scannerLimits?.nikto ?? 0}
                     </div>
                     <div>
                       <strong>zap scans used:</strong>{" "}

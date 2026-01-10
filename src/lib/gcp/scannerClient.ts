@@ -1,7 +1,7 @@
 export interface ScanJob {
   scanId: string;
   userId: string;
-  type: "nmap" | "openvas" | "nikto" | "zap";
+  type: "nmap" | "openvas" | "zap";
   target: string;
   options?: any;
   callbackUrl: string;
@@ -18,9 +18,6 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
   switch (type) {
     case "nmap":
       functionUrl = process.env.GCP_NMAP_SCANNER_URL || "";
-      break;
-    case "nikto":
-      functionUrl = process.env.GCP_NIKTO_SCANNER_URL || "";
       break;
     case "openvas":
       // Placeholder for OpenVAS scanner URL

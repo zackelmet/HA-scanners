@@ -325,7 +325,7 @@ async function updateUserSubscription(
   const existing = userSnap.data() || {};
   if (!existing.scannersUsedThisMonth) {
     await userRef.update({
-      scannersUsedThisMonth: { nmap: 0, openvas: 0, nikto: 0 },
+      scannersUsedThisMonth: { nmap: 0, openvas: 0, zap: 0 },
     });
   }
 
