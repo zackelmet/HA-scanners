@@ -87,30 +87,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Basic target validation (IP/domain for network scanners, URL for ZAP)
+    // Parse and normalize target based on scanner type
+    let normalizedTarget = target.trim();
+
     if (type === "zap") {
       // ZAP requires full URLs with protocol
-      const urlPattern = /^https?:\/\/.+/i;
-      if (!urlPattern.test(target)) {
-        console.log("Invalid ZAP target format:", target);
+      // If user didn't provide protocol, add http://
+      if (!/^https?:\/\//i.test(normalizedTarget)) {
+        normalizedTarget = `http://${normalizedTarget}`;
+      }
+
+      // Validate it's a proper URL
+      try {
+        new URL(normalizedTarget);
+      } catch (e) {
+        console.log("Invalid ZAP target format:", normalizedTarget);
         return NextResponse.json(
           {
             error:
-              "Invalid target format. ZAP requires a full URL (e.g., http://example.com or https://example.com)",
+              "Invalid target format. Must be a valid URL (e.g., example.com, http://example.com, or https://example.com)",
           },
           { status: 400 },
         );
       }
     } else {
-      // Other scanners use IP or domain
-      const targetPattern =
-        /^(?:(?:\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)$/;
-      if (!targetPattern.test(target)) {
-        console.log("Invalid network scanner target format:", target);
+      // OpenVAS and Nmap need just the hostname/IP (no protocol, no path)
+      // Strip protocol if present
+      normalizedTarget = normalizedTarget.replace(/^https?:\/\//i, "");
+
+      // Strip port if present (extract it for later if needed)
+      const portMatch = normalizedTarget.match(/:(\d+)/);
+      normalizedTarget = normalizedTarget.replace(/:\d+.*$/, "");
+
+      // Strip path/query if present
+      normalizedTarget = normalizedTarget.replace(/\/.*$/, "");
+
+      // Validate the resulting hostname or IP
+      const ipPattern = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+      const domainPattern =
+        /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+      if (
+        !ipPattern.test(normalizedTarget) &&
+        !domainPattern.test(normalizedTarget)
+      ) {
+        console.log("Invalid network scanner target format:", normalizedTarget);
         return NextResponse.json(
           {
             error:
-              "Invalid target format. Must be a valid IP address or domain",
+              "Invalid target format. Must be a valid IP address or domain name",
           },
           { status: 400 },
         );
@@ -203,7 +228,7 @@ export async function POST(request: NextRequest) {
         tx.set(newScanRef, {
           userId,
           type,
-          target,
+          target: normalizedTarget,
           options: normalizedOptions,
           status: "queued",
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -254,7 +279,7 @@ export async function POST(request: NextRequest) {
         scanId: scanRef.id,
         status: "queued",
         type,
-        target,
+        target: normalizedTarget,
         startTime: admin.firestore.FieldValue.serverTimestamp(),
         resultsSummary: null,
         gcpStorageUrl: null,
@@ -274,7 +299,7 @@ export async function POST(request: NextRequest) {
           scanId: scanRef.id,
           userId,
           type,
-          target,
+          target: normalizedTarget,
           options: normalizedOptions,
           callbackUrl: process.env.VERCEL_WEBHOOK_URL || "",
         });

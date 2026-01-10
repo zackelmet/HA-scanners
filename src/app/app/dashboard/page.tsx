@@ -386,7 +386,7 @@ export default function DashboardPage() {
                         placeholder={
                           scannerType === "zap"
                             ? "e.g., https://example.com or http://192.168.1.1:8080"
-                            : "e.g., 192.168.1.1 or example.com"
+                            : "e.g., 192.168.1.1, example.com, or http://example.com"
                         }
                         className="neon-input w-full py-3"
                         value={targetInput}
@@ -450,6 +450,15 @@ export default function DashboardPage() {
                           web applications for vulnerabilities like XSS, SQL
                           injection, and security misconfigurations.
                         </div>
+                      </div>
+                    )}
+
+                    {scannerType === "openvas" && (
+                      <div className="text-sm neon-subtle">
+                        Enter an <strong>IP address or domain</strong> (URLs
+                        will be automatically parsed). OpenVAS performs
+                        comprehensive vulnerability assessments using its
+                        extensive vulnerability database.
                       </div>
                     )}
 
