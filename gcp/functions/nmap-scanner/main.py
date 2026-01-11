@@ -58,11 +58,22 @@ def nmap_scanner(request):
 
             logging.info(f"Starting Nmap scan {scan_id} for target: {target}")
 
-            additional_nmap_options = "-sV -sC"
+            # Base options: service detection with faster timing
+            # -sV: service/version detection
+            # -T4: aggressive timing (faster)
+            # --version-intensity 5: standard service detection
+            # --max-retries 2: limit retries for faster scans
+            additional_nmap_options = "-sV -T4 --version-intensity 5 --max-retries 2"
+            
+            # Add scripts if explicitly requested
+            if options and options.get("enableScripts"):
+                additional_nmap_options += " -sC"
+            
             if options and "ports" in options:
                 additional_nmap_options += f" -p {options['ports']}"
 
             nmap_command = f"nmap -oX - {target} {additional_nmap_options}"
+            logging.info(f"Nmap command: {nmap_command}")
             
             # 10 minute timeout
             process = subprocess.run(

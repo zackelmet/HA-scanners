@@ -240,8 +240,9 @@ def upload_to_gcs(results: dict, scan_id: str):
         expiry_iso = None
         try:
             # Load service account credentials for signing
+            # Use sa-key.json which has proper GCS read permissions
             credentials = service_account.Credentials.from_service_account_file(
-                '/home/zack/hosted-scanners-appspot-key.json'
+                '/home/zack/sa-key.json'
             )
             
             # Create a new storage client with the service account credentials for signing
