@@ -225,7 +225,7 @@ def upload_to_gcs(results: dict, scan_id: str):
         # Convert to JSON
         json_output = json.dumps(results, indent=2)
         
-        # Upload to GCS using default credentials (VM's service account has permissions)
+        # Upload to GCS using default credentials (VM's service account has write permissions)
         client = storage.Client()
         bucket = client.bucket('hosted-scanners-reports')
         
@@ -235,37 +235,41 @@ def upload_to_gcs(results: dict, scan_id: str):
         gcs_url = f'gs://hosted-scanners-reports/openvas/{scan_id}.json'
         print(f"Results uploaded to {gcs_url}")
         
-        # Generate signed URL using service account credentials from key file
+        # Generate signed URL using service account credentials (for signing only)
         signed_url = None
+        expiry_iso = None
         try:
-            # Load the service account key from file (for signing only, not uploading)
-            import json as json_lib
-            with open('/home/zack/hosted-scanners-appspot-key.json', 'r') as f:
-                key_data = json_lib.load(f)
-            
-            # Create credentials from the service account key
-            creds = service_account.Credentials.from_service_account_info(key_data)
-            
-            # Generate signed URL - use the signer credentials
-            # We pass the signer email and let it use its private key
-            signed_url = json_blob.generate_signed_url(
-                version="v4",
-                expiration=timedelta(days=7),
-                method="GET",
-                service_account_email=creds.service_account_email
+            # Load service account credentials for signing
+            credentials = service_account.Credentials.from_service_account_file(
+                '/home/zack/hosted-scanners-appspot-key.json'
             )
-            print(f"✅ Signed URL generated (7-day expiry)")
+            
+            # Create a new storage client with the service account credentials for signing
+            signing_client = storage.Client(credentials=credentials)
+            signing_bucket = signing_client.bucket('hosted-scanners-reports')
+            signing_blob = signing_bucket.blob(f'openvas/{scan_id}.json')
+            
+            # Generate signed URL
+            expiration = datetime.utcnow() + timedelta(days=7)
+            signed_url = signing_blob.generate_signed_url(
+                version="v4",
+                expiration=expiration,
+                method="GET"
+            )
+            
+            expiry_iso = expiration.isoformat() + "Z"
+            print(f"✅ Signed URL generated (expires: {expiry_iso})")
+            
         except Exception as sign_error:
             print(f"⚠️ Signed URL generation failed: {sign_error}", file=sys.stderr)
-            signed_url = None
         
-        return gcs_url, signed_url
+        return gcs_url, signed_url, expiry_iso
         
     except Exception as e:
         print(f"GCS upload error: {e}")
-        return None, None
+        return None, None, None
 
-def notify_webhook(scan_id: str, user_id: str, callback_url: str, results: dict, gcs_url: str = None, signed_url: str = None):
+def notify_webhook(scan_id: str, user_id: str, callback_url: str, results: dict, gcs_url: str = None, signed_url: str = None, signed_url_expires: str = None):
     """Send scan completion notification to webhook"""
     try:
         # Format payload matching what the webhook endpoint expects
@@ -276,7 +280,7 @@ def notify_webhook(scan_id: str, user_id: str, callback_url: str, results: dict,
             'resultsSummary': results,
             'gcpStorageUrl': gcs_url or f'gs://hosted-scanners-reports/openvas/{scan_id}.json',
             'gcpSignedUrl': signed_url,
-            'gcpSignedUrlExpires': None,  # Signed URL is valid for 7 days from generation
+            'gcpSignedUrlExpires': signed_url_expires,
             'scannerType': 'openvas'
         }
         
@@ -316,11 +320,11 @@ def main():
     results = scan_target(args.target, args.scan_id)
     
     # Upload results and get signed URL
-    gcs_url, signed_url = upload_to_gcs(results, args.scan_id)
+    gcs_url, signed_url, signed_url_expires = upload_to_gcs(results, args.scan_id)
     
     # Call webhook if callback_url provided
     if args.callback_url:
-        notify_webhook(args.scan_id, args.user_id, args.callback_url, results, gcs_url, signed_url)
+        notify_webhook(args.scan_id, args.user_id, args.callback_url, results, gcs_url, signed_url, signed_url_expires)
     
     print("Scan complete!")
 
