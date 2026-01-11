@@ -1,7 +1,7 @@
 export interface ScanJob {
   scanId: string;
   userId: string;
-  type: "nmap" | "openvas" | "zap";
+  type: "nmap" | "openvas" | "zap" | "hybrid";
   target: string;
   options?: any;
   callbackUrl: string;

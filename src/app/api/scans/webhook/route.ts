@@ -2,6 +2,41 @@ import { NextRequest, NextResponse } from "next/server";
 import { initializeAdmin } from "@/lib/firebase/firebaseAdmin";
 import { ScanMetadata } from "@/lib/types/user";
 
+/**
+ * Generate a signed URL for a GCS path (gs://bucket/path)
+ * Valid for 7 days
+ */
+async function generateSignedUrl(gcsUrl: string): Promise<string | null> {
+  try {
+    const admin = initializeAdmin();
+    const storage = admin.storage();
+
+    // Parse gs://bucket/path format
+    const match = gcsUrl.match(/^gs:\/\/([^\/]+)\/(.+)$/);
+    if (!match) {
+      console.error("Invalid GCS URL format:", gcsUrl);
+      return null;
+    }
+
+    const [, bucketName, filePath] = match;
+    const bucket = storage.bucket(bucketName);
+    const file = bucket.file(filePath);
+
+    // Generate signed URL valid for 7 days
+    const [signedUrl] = await file.getSignedUrl({
+      version: "v4",
+      action: "read",
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    console.log(`✅ Generated signed URL for ${gcsUrl}`);
+    return signedUrl;
+  } catch (error) {
+    console.error("Failed to generate signed URL:", error);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const admin = initializeAdmin();
@@ -85,12 +120,38 @@ export async function POST(request: NextRequest) {
         (status === "done" ? "completed" : status) || "completed";
       const normalizedGcsUrl = gcpStorageUrl || gcsPath || null;
       const normalizedSummary = resultsSummary || summary || null;
-      const normalizedSignedUrl = gcpSignedUrl || null;
-      const normalizedSignedUrlExpires = gcpSignedUrlExpires || null;
+
+      // Generate signed URLs if GCS URL provided but signed URL missing
+      let normalizedSignedUrl = gcpSignedUrl || null;
+      let normalizedSignedUrlExpires = gcpSignedUrlExpires || null;
+
+      if (normalizedGcsUrl && !normalizedSignedUrl) {
+        console.log("🔗 Generating signed URL for:", normalizedGcsUrl);
+        normalizedSignedUrl = await generateSignedUrl(normalizedGcsUrl);
+        if (normalizedSignedUrl) {
+          normalizedSignedUrlExpires = new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000,
+          ).toISOString();
+        }
+      }
+
       const normalizedReportUrl = gcpReportStorageUrl || null;
-      const normalizedReportSignedUrl = gcpReportSignedUrl || null;
-      const normalizedReportSignedUrlExpires =
-        gcpReportSignedUrlExpires || null;
+      let normalizedReportSignedUrl = gcpReportSignedUrl || null;
+      let normalizedReportSignedUrlExpires = gcpReportSignedUrlExpires || null;
+
+      if (normalizedReportUrl && !normalizedReportSignedUrl) {
+        console.log(
+          "🔗 Generating signed URL for report:",
+          normalizedReportUrl,
+        );
+        normalizedReportSignedUrl =
+          await generateSignedUrl(normalizedReportUrl);
+        if (normalizedReportSignedUrl) {
+          normalizedReportSignedUrlExpires = new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000,
+          ).toISOString();
+        }
+      }
 
       // Merge the update into the user's scan doc (create if missing)
       await userScanRef.set(

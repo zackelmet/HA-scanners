@@ -77,11 +77,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate scan type
-    if (type !== "nmap" && type !== "openvas" && type !== "zap") {
-      console.log("Invalid scan type:", type);
+    if (
+      type !== "nmap" &&
+      type !== "openvas" &&
+      type !== "zap" &&
+      type !== "hybrid"
+    ) {
+      console.log("Invalid scan type requested:", type);
       return NextResponse.json(
         {
-          error: "Invalid scan type. Must be 'nmap', 'openvas', or 'zap'",
+          error:
+            "Invalid scan type. Must be 'nmap', 'openvas', 'zap', or 'hybrid'",
         },
         { status: 400 },
       );
