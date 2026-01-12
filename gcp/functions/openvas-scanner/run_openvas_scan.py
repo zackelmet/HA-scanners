@@ -28,7 +28,7 @@ SCAN_CONFIG_ID = "8715c877-47a0-438d-98a3-27c7a6ab2196"  # Discovery
 # "74db13d6-7489-11df-91b9-002264764cea" = Full and very deep ultimate
 SCANNER_ID = "08b69003-5fc2-4037-a479-93b440211c73"  # OpenVAS Default
 PORT_LIST_ID = "4a4717fe-57d2-11e1-9a26-406186ea4fc5"  # All IANA assigned TCP (not used, we create custom)
-GCS_BUCKET = "hosted-scanners-scan-results"
+GCS_BUCKET = "hosted-scanners-reports"
 SERVICE_ACCOUNT_KEY = "/home/hackeranalytics0/sa-key.json"
 WEBHOOK_SECRET = "26b3018a3329ac8b92b35f5d9c29c1f83b211219cd8ba79e47a494db"
 

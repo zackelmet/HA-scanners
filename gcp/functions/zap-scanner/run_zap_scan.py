@@ -20,7 +20,7 @@ ZAP_API_KEY = None  # API key disabled for simplicity
 ZAP_PROXY = {'http': 'http://localhost:8080', 'https': 'http://localhost:8080'}
 
 # GCS Configuration
-GCS_BUCKET = 'hacker-analytics-zap-reports'
+GCS_BUCKET = 'hosted-scanners-reports'
 SERVICE_ACCOUNT_KEY = "/home/zapuser/gcs-key.json"
 
 # Webhook Configuration
@@ -256,7 +256,7 @@ def upload_to_gcs(scan_id: str, user_id: str, report_files: dict) -> dict:
     uploaded_urls = {}
     
     for report_type, filename in report_files.items():
-        blob_name = f"zap-scans/{user_id}/{scan_id}/{filename}"
+        blob_name = f"zap/{user_id}/{scan_id}/{filename}"
         blob = bucket.blob(blob_name)
         
         blob.upload_from_filename(f"/tmp/{filename}")
@@ -298,8 +298,9 @@ def send_webhook(webhook_url: str, scan_id: str, user_id: str, results: dict, re
             'low': results['alerts_by_risk']['Low'],
             'info': results['alerts_by_risk']['Informational']
         },
-        # Primary signed URL (JSON report)
+        # Primary signed URLs (JSON and XML)
         'gcpSignedUrl': report_urls.get('json'),
+        'gcpXmlSignedUrl': report_urls.get('xml'),
         'gcpSignedUrlExpires': expires_at.isoformat(),
         # Report signed URL (HTML report)
         'gcpReportSignedUrl': report_urls.get('html'),
@@ -310,7 +311,7 @@ def send_webhook(webhook_url: str, scan_id: str, user_id: str, results: dict, re
     
     headers = {
         'Content-Type': 'application/json',
-        'X-Webhook-Secret': WEBHOOK_SECRET
+        'x-gcp-webhook-secret': WEBHOOK_SECRET
     }
     
     log(f"Webhook payload: {json.dumps(payload, indent=2)}")

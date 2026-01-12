@@ -58,7 +58,7 @@ def run_gvm_cli(xml_command: str, timeout: int = 30) -> str:
         return ""
 
 def run_nmap_scan(target: str) -> dict:
-    """Run Nmap service detection scan."""
+    """Run Nmap service detection scan. Returns dict with 'ports' and 'xml' keys."""
     print(f"Running Nmap service detection scan on {target}...")
     
     try:
@@ -67,6 +67,8 @@ def run_nmap_scan(target: str) -> dict:
             '-sV',  # Service version detection
             '-T4',  # Aggressive timing
             '--version-intensity', '5',
+            '--max-retries', '2',
+            '-p-',  # Scan ALL 65535 ports
             '-oX', '-',  # XML output to stdout
             target
         ]
@@ -75,10 +77,13 @@ def run_nmap_scan(target: str) -> dict:
         
         if result.returncode != 0:
             print(f"ERROR: Nmap failed: {result.stderr}")
-            return {"ports": []}
+            return {"ports": [], "xml": ""}
+        
+        # Store raw XML for upload
+        xml_output = result.stdout
         
         # Parse XML output
-        root = ET.fromstring(result.stdout)
+        root = ET.fromstring(xml_output)
         services = []
         
         for host in root.findall('.//host'):
@@ -110,21 +115,55 @@ def run_nmap_scan(target: str) -> dict:
                 cpe_str = f" (CPE: {cpes[0]})" if cpes else ""
                 print(f"  Port {portid}: {product} {version}{cpe_str}")
         
-        return {"ports": services}
+        return {"ports": services, "xml": xml_output}
     
     except subprocess.TimeoutExpired:
         print("ERROR: Nmap scan timed out")
-        return {"ports": []}
+        return {"ports": [], "xml": ""}
     except Exception as e:
         print(f"ERROR: Nmap scan failed: {e}")
+        return {"ports": [], "xml": ""}
+        print(f"ERROR: Nmap scan failed: {e}")
         return {"ports": []}
+
+def normalize_product_name(product: str) -> str:
+    """Normalize product names to match CVE database keys."""
+    product_lower = product.lower()
+    
+    # Map common variations to database keys
+    mappings = {
+        'apache httpd': 'apache',
+        'apache http server': 'apache',
+        'httpd': 'apache',
+        'nginx web server': 'nginx',
+        'microsoft iis': 'iis',
+        'openssh': 'openssh',
+        'mysql': 'mysql',
+        'postgresql': 'postgresql',
+        'postgres': 'postgresql',
+        'mariadb': 'mysql',  # MariaDB is MySQL fork
+        'php': 'php',
+        'redis': 'redis'
+    }
+    
+    # Check direct mapping first
+    if product_lower in mappings:
+        return mappings[product_lower]
+    
+    # Extract first word (often the main product name)
+    first_word = product_lower.split()[0] if ' ' in product_lower else product_lower
+    return first_word
 
 def query_cves_for_service(product: str, version: str) -> list:
     """Query OpenVAS database for CVEs matching a product and version."""
     print(f"    Checking {product} {version}...")
     
+    # Normalize product name for database lookup
+    normalized_product = normalize_product_name(product)
+    print(f"      Normalized to: {normalized_product}")
+    
     # First, check static CVE mapping for exact match
-    cve_ids = get_cves_for_service(product, version)
+    cve_ids = get_cves_for_service(normalized_product, version)
     
     # If no exact match, try version range checking (check nearby versions)
     if not cve_ids:
@@ -132,7 +171,9 @@ def query_cves_for_service(product: str, version: str) -> list:
         # This handles cases where CVE affects "up to X.Y.Z" but not version X.Y.Z itself
         try:
             from cve_mapping import get_cves_for_version_range
-            cve_ids = get_cves_for_version_range(product, version, check_similar=True)
+            cve_ids = get_cves_for_version_range(normalized_product, version, check_similar=True)
+            if cve_ids:
+                print(f"      Found {len(cve_ids)} CVEs via version range matching")
         except ImportError:
             # Fallback if get_cves_for_version_range not available
             pass
@@ -172,6 +213,7 @@ def scan_target(target: str, scan_id: str) -> dict:
     print("=== Phase 1: Service Detection ===")
     nmap_results = run_nmap_scan(target)
     services = nmap_results.get('ports', [])
+    nmap_xml = nmap_results.get('xml', '')
     print(f"Nmap found {len(services)} open ports with {len(services)} identified services\n")
     
     # Phase 2: CVE Correlation
@@ -211,29 +253,43 @@ def scan_target(target: str, scan_id: str) -> dict:
         "target": target,
         "services": services,
         "vulnerabilities": all_vulnerabilities,
-        "total_vulns": len(all_vulnerabilities)
+        "total_vulns": len(all_vulnerabilities),
+        "nmap_xml": nmap_xml
     }
 
 def upload_to_gcs(results: dict, scan_id: str):
-    """Upload scan results to Google Cloud Storage and return signed URL."""
+    """Upload scan results to Google Cloud Storage (JSON + XML) and return signed URLs."""
     print("Uploading to GCS...")
     
     try:
         from datetime import datetime, timedelta
         from google.oauth2 import service_account
         
-        # Convert to JSON
+        # Extract XML from results
+        nmap_xml = results.pop('nmap_xml', '')
+        
+        # Convert results to JSON
         json_output = json.dumps(results, indent=2)
         
         # Upload to GCS using default credentials (VM's service account has write permissions)
         client = storage.Client()
         bucket = client.bucket('hosted-scanners-reports')
         
+        # Upload JSON
         json_blob = bucket.blob(f'openvas/{scan_id}.json')
         json_blob.upload_from_string(json_output, content_type='application/json')
+        print(f"JSON uploaded to gs://hosted-scanners-reports/openvas/{scan_id}.json")
+        
+        # Upload XML (if available)
+        xml_url = None
+        xml_signed_url = None
+        if nmap_xml:
+            xml_blob = bucket.blob(f'openvas/{scan_id}.xml')
+            xml_blob.upload_from_string(nmap_xml, content_type='application/xml')
+            xml_url = f'gs://hosted-scanners-reports/openvas/{scan_id}.xml'
+            print(f"XML uploaded to {xml_url}")
         
         gcs_url = f'gs://hosted-scanners-reports/openvas/{scan_id}.json'
-        print(f"Results uploaded to {gcs_url}")
         
         # Generate signed URL using service account credentials (for signing only)
         signed_url = None
@@ -250,7 +306,7 @@ def upload_to_gcs(results: dict, scan_id: str):
             signing_bucket = signing_client.bucket('hosted-scanners-reports')
             signing_blob = signing_bucket.blob(f'openvas/{scan_id}.json')
             
-            # Generate signed URL
+            # Generate signed URL for JSON
             expiration = datetime.utcnow() + timedelta(days=7)
             signed_url = signing_blob.generate_signed_url(
                 version="v4",
@@ -259,18 +315,28 @@ def upload_to_gcs(results: dict, scan_id: str):
             )
             
             expiry_iso = expiration.isoformat() + "Z"
-            print(f"✅ Signed URL generated (expires: {expiry_iso})")
+            print(f"✅ JSON signed URL generated (expires: {expiry_iso})")
+            
+            # Generate signed URL for XML if it exists
+            if xml_url:
+                xml_signing_blob = signing_bucket.blob(f'openvas/{scan_id}.xml')
+                xml_signed_url = xml_signing_blob.generate_signed_url(
+                    version="v4",
+                    expiration=expiration,
+                    method="GET"
+                )
+                print(f"✅ XML signed URL generated")
             
         except Exception as sign_error:
             print(f"⚠️ Signed URL generation failed: {sign_error}", file=sys.stderr)
         
-        return gcs_url, signed_url, expiry_iso
+        return gcs_url, signed_url, expiry_iso, xml_url, xml_signed_url
         
     except Exception as e:
         print(f"GCS upload error: {e}")
-        return None, None, None
+        return None, None, None, None, None
 
-def notify_webhook(scan_id: str, user_id: str, callback_url: str, results: dict, gcs_url: str = None, signed_url: str = None, signed_url_expires: str = None):
+def notify_webhook(scan_id: str, user_id: str, callback_url: str, results: dict, gcs_url: str = None, signed_url: str = None, signed_url_expires: str = None, xml_url: str = None, xml_signed_url: str = None):
     """Send scan completion notification to webhook"""
     try:
         # Format payload matching what the webhook endpoint expects
@@ -282,6 +348,8 @@ def notify_webhook(scan_id: str, user_id: str, callback_url: str, results: dict,
             'gcpStorageUrl': gcs_url or f'gs://hosted-scanners-reports/openvas/{scan_id}.json',
             'gcpSignedUrl': signed_url,
             'gcpSignedUrlExpires': signed_url_expires,
+            'gcpXmlUrl': xml_url,
+            'gcpXmlSignedUrl': xml_signed_url,
             'scannerType': 'openvas'
         }
         
@@ -289,7 +357,7 @@ def notify_webhook(scan_id: str, user_id: str, callback_url: str, results: dict,
         headers = {'Content-Type': 'application/json'}
         webhook_secret = os.environ.get('GCP_WEBHOOK_SECRET')
         if webhook_secret:
-            headers['x-webhook-signature'] = webhook_secret
+            headers['x-gcp-webhook-secret'] = webhook_secret
         
         response = requests.post(
             callback_url,
@@ -320,12 +388,12 @@ def main():
     # Run scan
     results = scan_target(args.target, args.scan_id)
     
-    # Upload results and get signed URL
-    gcs_url, signed_url, signed_url_expires = upload_to_gcs(results, args.scan_id)
+    # Upload results and get signed URLs (JSON + XML)
+    gcs_url, signed_url, signed_url_expires, xml_url, xml_signed_url = upload_to_gcs(results, args.scan_id)
     
     # Call webhook if callback_url provided
     if args.callback_url:
-        notify_webhook(args.scan_id, args.user_id, args.callback_url, results, gcs_url, signed_url, signed_url_expires)
+        notify_webhook(args.scan_id, args.user_id, args.callback_url, results, gcs_url, signed_url, signed_url_expires, xml_url, xml_signed_url)
     
     print("Scan complete!")
 

@@ -2,10 +2,12 @@ import functions_framework
 import json
 import os
 import subprocess
+import sys
 from uuid import uuid4
 from datetime import datetime, timedelta
 import xmltodict
 from google.cloud import storage
+from google.oauth2 import service_account
 import requests
 from io import BytesIO
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
@@ -16,13 +18,12 @@ import logging
 # ==============================================================================
 # Debug Logging Setup
 # ==============================================================================
-# Use project temp directory for logs, as /tmp is not readable by me
-LOG_FILE = '/home/hackeranalytics0/.gemini/tmp/9c58587e821288420b8ab21bc6668841e3b5a83b86decaf6476f3252b5bba803/nmap_scanner.log'
-# Clear the log file at the start of each run
-with open(LOG_FILE, 'w') as f:
-    f.write('')
-logging.basicConfig(filename=LOG_FILE, level=logging.INFO, 
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+# Log to stderr so Cloud Logging picks it up
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    stream=sys.stderr
+)
 # ==============================================================================
 
 # Environment variables
@@ -72,7 +73,9 @@ def nmap_scanner(request):
             if options and "ports" in options:
                 additional_nmap_options += f" -p {options['ports']}"
 
-            nmap_command = f"nmap -oX - {target} {additional_nmap_options}"
+            # Use TCP connect scan (-sT) for unprivileged environments like Cloud Run
+            # --unprivileged mode avoids raw socket requirements
+            nmap_command = f"nmap --unprivileged -sT -oX - {target} {additional_nmap_options}"
             logging.info(f"Nmap command: {nmap_command}")
             
             # 10 minute timeout
@@ -94,6 +97,8 @@ def nmap_scanner(request):
         # Step 2: Parse XML and process results
         logging.info("Step 2: Parsing XML and processing results.")
         try:
+            # Store raw XML for upload
+            nmap_xml_output = nmap_raw_output
             nmap_result = xmltodict.parse(nmap_raw_output)
             logging.info(f"Nmap XML parsed for scan {scan_id}.")
 
@@ -111,15 +116,29 @@ def nmap_scanner(request):
             findings = []
             for port in open_ports:
                 service = port.get("service", {})
-                description = f"Port {port.get('@portid')} is open. Protocol: {port.get('@protocol')}."
-                description += f" Service: {service.get('@name', 'unknown')}."
-                if service.get("@product"):
-                    description += f" Product: {service.get('@product')}."
-                if service.get("@version"):
-                    description += f" Version: {service.get('@version')}."
+                port_num = port.get('@portid')
+                protocol = port.get('@protocol', 'tcp')
+                service_name = service.get('@name', 'unknown')
+                product = service.get('@product', '')
+                version = service.get('@version', '')
+                
+                description = f"Port {port_num} is open. Protocol: {protocol}."
+                description += f" Service: {service_name}."
+                if product:
+                    description += f" Product: {product}."
+                if version:
+                    description += f" Version: {version}."
                 findings.append({
-                    "title": f"Open Port: {port.get('@portid')}/{port.get('@protocol')}",
-                    "description": description, "severity": "Medium",
+                    "title": f"Open Port: {port_num}/{protocol}",
+                    "description": description, 
+                    "severity": "Medium",
+                    "port": port_num,
+                    "protocol": protocol,
+                    "service": {
+                        "name": service_name,
+                        "product": product,
+                        "version": version
+                    }
                 })
             
             nmaprun = nmap_result.get("nmaprun", {})
@@ -144,22 +163,28 @@ def nmap_scanner(request):
         logging.info("Step 3: Initializing GCS client and paths.")
         try:
             bucket = storage_client.bucket(GCP_BUCKET_NAME)
-            dest_base = f"scan-results/{user_id}/{scan_id}"
+            dest_base = f"nmap/{user_id}/{scan_id}"
             json_path = f"{dest_base}.json"
+            xml_path = f"{dest_base}.xml"
             pdf_path = f"{dest_base}.pdf"
-            logging.info(f"Paths set. JSON: {json_path}, PDF: {pdf_path}")
+            logging.info(f"Paths set. JSON: {json_path}, XML: {xml_path}, PDF: {pdf_path}")
         except Exception as e:
             raise Exception(f"Failed at GCS initialization: {e}")
 
-        # Step 4: Upload JSON results
-        logging.info("Step 4: Attempting to upload JSON results...")
+        # Step 4: Upload JSON and XML results
+        logging.info("Step 4: Attempting to upload JSON and XML results...")
         try:
             bucket.blob(json_path).upload_from_string(
                 json.dumps(runner_result, indent=2), content_type="application/json"
             )
             logging.info("Successfully uploaded JSON results.")
+            
+            bucket.blob(xml_path).upload_from_string(
+                nmap_xml_output, content_type="application/xml"
+            )
+            logging.info("Successfully uploaded XML results.")
         except Exception as e:
-            raise Exception(f"Failed at JSON upload: {e}")
+            raise Exception(f"Failed at JSON/XML upload: {e}")
 
         # Step 5: Generate and Upload PDF
         logging.info("Step 5: Generating and uploading PDF.")
@@ -193,12 +218,53 @@ def nmap_scanner(request):
 
         # Step 6: Generate Signed URLs (non-critical)
         logging.info("Step 6: Attempting to generate signed URLs.")
-        signed_json_url, signed_pdf_url = None, None
+        signed_json_url, signed_xml_url, signed_pdf_url = None, None, None
         expires_at = datetime.utcnow() + timedelta(days=7)
         try:
-            signed_json_url = bucket.blob(json_path).generate_signed_url(version="v4", expiration=expires_at)
-            signed_pdf_url = bucket.blob(pdf_path).generate_signed_url(version="v4", expiration=expires_at)
-            logging.info("Successfully generated signed URLs (if credentials allowed).")
+            # Try to load service account credentials for signing
+            sa_key_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS', '/secrets/sa-key.json')
+            sa_key_json = os.environ.get('GCP_SERVICE_ACCOUNT_KEY')
+            sa_key_b64 = os.environ.get('GCP_SERVICE_ACCOUNT_KEY_B64')
+            
+            if sa_key_b64:
+                # Decode base64 and load from JSON string
+                import base64
+                import tempfile
+                decoded = base64.b64decode(sa_key_b64).decode('utf-8')
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                    f.write(decoded)
+                    temp_path = f.name
+                credentials = service_account.Credentials.from_service_account_file(temp_path)
+                os.unlink(temp_path)
+            elif sa_key_json:
+                # Load from environment variable (JSON string)
+                import tempfile
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                    f.write(sa_key_json)
+                    temp_path = f.name
+                credentials = service_account.Credentials.from_service_account_file(temp_path)
+                os.unlink(temp_path)
+            elif os.path.exists(sa_key_path):
+                # Load from mounted file
+                credentials = service_account.Credentials.from_service_account_file(sa_key_path)
+            else:
+                # Fall back to default credentials (will likely fail for signing)
+                raise Exception("No service account key found for signing")
+            
+            # Create signing client with service account credentials
+            signing_client = storage.Client(credentials=credentials)
+            signing_bucket = signing_client.bucket(GCP_BUCKET_NAME)
+            
+            signed_json_url = signing_bucket.blob(json_path).generate_signed_url(
+                version="v4", expiration=expires_at, method="GET"
+            )
+            signed_xml_url = signing_bucket.blob(xml_path).generate_signed_url(
+                version="v4", expiration=expires_at, method="GET"
+            )
+            signed_pdf_url = signing_bucket.blob(pdf_path).generate_signed_url(
+                version="v4", expiration=expires_at, method="GET"
+            )
+            logging.info("Successfully generated signed URLs with service account credentials.")
         except Exception as e:
             logging.warning(f"Could not generate signed URLs: {e}")
         
@@ -210,6 +276,8 @@ def nmap_scanner(request):
                     "scanId": scan_id, "userId": user_id,
                     "gcpStorageUrl": f"gs://{GCP_BUCKET_NAME}/{json_path}",
                     "gcpSignedUrl": signed_json_url,
+                    "gcpXmlUrl": f"gs://{GCP_BUCKET_NAME}/{xml_path}",
+                    "gcpXmlSignedUrl": signed_xml_url,
                     "gcpReportStorageUrl": f"gs://{GCP_BUCKET_NAME}/{pdf_path}",
                     "gcpReportSignedUrl": signed_pdf_url,
                     "gcpSignedUrlExpires": expires_at.isoformat() + "Z",
