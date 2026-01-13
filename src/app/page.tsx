@@ -9,46 +9,43 @@ export default function Home() {
     {
       name: "Essential",
       price: "$29",
-      priceId: "price_1SWL2b053rHBeqKvm63qagHN", // Essential plan
-      label: "Small Organization",
+      priceId: "price_1Sp9hn053rHBeqKvzWTRWqP2", // Essential plan
+      label: "Perfect for small teams",
       features: [
-        "Nmap (Network): 1,920 IPs / month",
-        "OpenVAS (Vuln): 240 IPs / month",
-
-        "OWASP ZAP (Web App): 240 URLs / month",
+        "5 targets/month",
+        "Nmap, OpenVAS & OWASP ZAP scanners",
+        "Zero setup - instant deployment",
+        "Always up-to-date threat feeds",
+        "30-day data retention",
         "Email support",
-        "Data retention: 30 days",
       ],
     },
     {
       name: "Pro",
       price: "$99",
-      priceId: "price_1SWNxX053rHBeqKvAnt0iUYW", // Pro plan
+      priceId: "price_1Sp9iB053rHBeqKvcIa3uZlm", // Pro plan
       label: "Best for growing teams",
       features: [
-        "Nmap (Network): 15,360 IPs / month",
-        "OpenVAS (Vuln): 1,920 IPs / month",
-
-        "OWASP ZAP (Web App): 1,920 URLs / month",
-        "Priority support",
-        "CSV/JSON export: Export scan data as CSV or JSON for external analysis",
-        "Data retention: 30 days",
+        "25 targets/month",
+        "Full scanner suite access",
+        "API access for automation",
+        "CSV/JSON export capabilities",
+        "Priority email support",
+        "30-day data retention",
       ],
       popular: true,
     },
     {
       name: "Scale",
-      price: "$299",
-      priceId: "price_1SWNyr053rHBeqKvacwGtCaY", // Scale plan
-      label: "Large Network",
+      price: "$249",
+      priceId: "price_1Sp9iU053rHBeqKvYpsGnT42", // Scale plan
+      label: "For large organizations",
       features: [
-        "Nmap (Network): 122,880 IPs / month",
-        "OpenVAS (Vuln): 7,680 IPs / month",
-
-        "OWASP ZAP (Web App): 7,680 URLs / month",
-        "24/7 dedicated support",
-        "Unlimited Data Retention: Never delete scan history",
-        "Executive Summary Reports: reports with charts for executives",
+        "100 targets/month",
+        "Full scanner suite + custom integrations",
+        "Unlimited data retention",
+        "Executive summary reports",
+        "24/7 priority support",
         "SLA guarantee",
       ],
     },
