@@ -75,12 +75,18 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
       : job;
 
   // Fire-and-forget: don't await the fetch so the API returns immediately
+  // Use AbortController for a longer timeout (30 seconds for Cloud Run cold starts)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
   fetch(functionUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    signal: controller.signal,
   })
     .then(async (resp) => {
+      clearTimeout(timeoutId);
       if (!resp.ok) {
         const body = await resp.text().catch(() => "");
         console.error(
@@ -93,6 +99,13 @@ export async function enqueueScanJob(job: ScanJob): Promise<void> {
       }
     })
     .catch((err) => {
-      console.error(`Error dispatching scan job to ${functionUrl}:`, err);
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError") {
+        console.error(
+          `Timeout dispatching scan job to ${functionUrl} after 30s`,
+        );
+      } else {
+        console.error(`Error dispatching scan job to ${functionUrl}:`, err);
+      }
     });
 }
