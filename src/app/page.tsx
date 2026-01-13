@@ -111,9 +111,9 @@ const faqs: Faq[] = [
       "Our scanners are engineered to be efficient and respectful of your network's capacity. You have granular control over scan intensity and scheduling, ensuring you can run comprehensive security checks without causing performance degradation to live production assets.",
   },
   {
-    question: "Do I have to sign a long-term contract?",
+    question: "Can I get my data out of the platform?",
     answer:
-      "No. All of our paid plans are offered on a flexible month-to-month subscription basis, allowing you to scale your usage up or down as your needs change. You can cancel at any time, and we stand by our 30-day money-back guarantee.",
+      "Yes. Every scan generates a machine-readable XML file and a presentation-ready PDF. You own your data and can export it to use in your own internal tools or spreadsheets.",
   },
   {
     question: "How quickly can I get my first scan results?",
