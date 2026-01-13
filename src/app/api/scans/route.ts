@@ -178,10 +178,12 @@ export async function POST(request: NextRequest) {
     if (needsMonthlyReset(userData.lastMonthlyReset)) {
       await userDocRef.update({
         scansThisMonth: 0,
+        scannersUsedThisMonth: { nmap: 0, openvas: 0, zap: 0 },
         lastMonthlyReset: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
       userData.scansThisMonth = 0;
+      userData.scannersUsedThisMonth = { nmap: 0, openvas: 0, zap: 0 };
     }
 
     // Enforce per-scanner monthly limits

@@ -92,11 +92,11 @@ export const PLAN_LIMITS = {
   },
   essential: {
     tier: "essential" as PlanTier,
-    monthlyScans: 500,
-    scanners: { nmap: 1920, openvas: 240, zap: 240 },
+    monthlyScans: 9, // 3 per scanner * 3 scanners
+    scanners: { nmap: 3, openvas: 3, zap: 3 },
     features: {
       nmapEnabled: true,
-      openvasEnabled: false,
+      openvasEnabled: true,
       apiAccess: false,
       customReports: false,
       prioritySupport: false,
@@ -104,8 +104,8 @@ export const PLAN_LIMITS = {
   },
   pro: {
     tier: "pro" as PlanTier,
-    monthlyScans: 2500,
-    scanners: { nmap: 15360, openvas: 1920, zap: 1920 },
+    monthlyScans: 60, // 20 per scanner * 3 scanners
+    scanners: { nmap: 20, openvas: 20, zap: 20 },
     features: {
       nmapEnabled: true,
       openvasEnabled: true,
@@ -116,8 +116,8 @@ export const PLAN_LIMITS = {
   },
   scale: {
     tier: "scale" as PlanTier,
-    monthlyScans: 10000,
-    scanners: { nmap: 122880, openvas: 7680, zap: 7680 },
+    monthlyScans: 300, // 100 per scanner * 3 scanners
+    scanners: { nmap: 100, openvas: 100, zap: 100 },
     features: {
       nmapEnabled: true,
       openvasEnabled: true,
