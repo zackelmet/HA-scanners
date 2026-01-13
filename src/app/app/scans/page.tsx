@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
@@ -11,10 +11,13 @@ import {
 import { useUserData } from "@/lib/hooks/useUserData";
 import { useUserScans } from "@/lib/hooks/useUserScans";
 import { useAuth } from "@/lib/context/AuthContext";
-import { auth } from "@/lib/firebase/firebaseClient";
+import { auth, db } from "@/lib/firebase/firebaseClient";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { doc, updateDoc } from "firebase/firestore";
+import { SavedTarget } from "@/lib/types/user";
 
 type TabKey = "new" | "history";
+const CUSTOM_TARGET_ID = "__custom_target__";
 
 export default function ScansPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("new");
@@ -34,6 +37,47 @@ export default function ScansPage() {
   const { scans: userScans = [], loading: scansLoading } = useUserScans(
     currentUser?.uid ?? null,
   );
+  const savedTargets = useMemo(() => userData?.savedTargets ?? [], [userData]);
+  const [selectedTargetId, setSelectedTargetId] = useState(CUSTOM_TARGET_ID);
+  const selectedTarget = useMemo(
+    () => savedTargets.find((target) => target.id === selectedTargetId) ?? null,
+    [savedTargets, selectedTargetId],
+  );
+  const [saveTarget, setSaveTarget] = useState(false);
+  const [customTargetName, setCustomTargetName] = useState("");
+  const [customTargetTags, setCustomTargetTags] = useState("");
+  const [customTargetType, setCustomTargetType] =
+    useState<SavedTarget["type"]>("ip");
+
+  useEffect(() => {
+    if (selectedTarget) {
+      setTargetInput(selectedTarget.address);
+    }
+  }, [selectedTarget]);
+
+  useEffect(() => {
+    if (selectedTargetId !== CUSTOM_TARGET_ID) {
+      setSaveTarget(false);
+    }
+  }, [selectedTargetId]);
+
+  useEffect(() => {
+    if (selectedTargetId === CUSTOM_TARGET_ID) {
+      setCustomTargetType(scannerType === "zap" ? "url" : "ip");
+    }
+  }, [scannerType, selectedTargetId]);
+
+  const handleSavedTargetChange = (value: string) => {
+    setSelectedTargetId(value);
+    if (value === CUSTOM_TARGET_ID) {
+      setTargetInput("");
+    } else {
+      const target = savedTargets.find((candidate) => candidate.id === value);
+      if (target) {
+        setTargetInput(target.address);
+      }
+    }
+  };
 
   const hasActiveSubscription = userData?.subscriptionStatus === "active";
 
@@ -57,18 +101,53 @@ export default function ScansPage() {
     return new Date(ts).toLocaleString();
   };
 
+  const persistCustomTarget = async (address: string) => {
+    if (!currentUser) return;
+    const userRef = doc(db, "users", currentUser.uid);
+    const parsedTags = customTargetTags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const targetName = customTargetName.trim() || address;
+    const newTarget: SavedTarget = {
+      id:
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`,
+      name: targetName,
+      address,
+      type: customTargetType,
+      tags: parsedTags,
+    };
+    const updatedTargets = [...savedTargets, newTarget];
+    await updateDoc(userRef, {
+      savedTargets: updatedTargets,
+    });
+    setSelectedTargetId(newTarget.id);
+    setCustomTargetName("");
+    setCustomTargetTags("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
     setSubmitSuccess(null);
     setSubmitting(true);
 
+    const targetAddress = selectedTarget?.address ?? targetInput.trim();
+    if (!targetAddress) {
+      setSubmitError(
+        "Provide an IP address, domain, or URL before launching a scan.",
+      );
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("Not authenticated");
 
       const token = await user.getIdToken(true);
-
       const nmapOptions = { topPorts: 100 };
       const zapOptions = { scanProfile: zapProfile };
 
@@ -80,7 +159,7 @@ export default function ScansPage() {
         },
         body: JSON.stringify({
           type: scannerType,
-          target: targetInput,
+          target: targetAddress,
           options:
             scannerType === "nmap"
               ? nmapOptions
@@ -97,6 +176,13 @@ export default function ScansPage() {
         setSubmitSuccess(`Scan queued: ${data.scanId || "queued"}`);
         setTargetInput("");
         setTimeout(() => setActiveTab("history"), 2000);
+        if (saveTarget && selectedTargetId === CUSTOM_TARGET_ID) {
+          try {
+            await persistCustomTarget(targetAddress);
+          } catch (error) {
+            console.error("Failed to save target after scan", error);
+          }
+        }
       }
     } catch (err: any) {
       setSubmitError(err.message || "Unknown error");
@@ -203,6 +289,45 @@ export default function ScansPage() {
                     </select>
                   </div>
 
+                  {/* Saved Targets */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-[#0A1128] mb-2">
+                      Saved Targets
+                    </label>
+                    <div className="flex flex-wrap gap-3">
+                      <select
+                        className="min-w-[200px] px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00FED9] focus:border-transparent"
+                        value={selectedTargetId}
+                        onChange={(event) =>
+                          handleSavedTargetChange(event.target.value)
+                        }
+                      >
+                        <option value={CUSTOM_TARGET_ID}>Enter manually</option>
+                        {savedTargets.map((target) => (
+                          <option key={target.id} value={target.id}>
+                            {target.name} ({target.address})
+                          </option>
+                        ))}
+                      </select>
+                      {selectedTarget && (
+                        <button
+                          type="button"
+                          className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:border-[#00FED9]"
+                          onClick={() =>
+                            handleSavedTargetChange(CUSTOM_TARGET_ID)
+                          }
+                        >
+                          Use different target
+                        </button>
+                      )}
+                    </div>
+                    {selectedTarget && (
+                      <p className="text-xs text-gray-500">
+                        Using saved target: {selectedTarget.address}
+                      </p>
+                    )}
+                  </div>
+
                   {/* Target Input */}
                   <div>
                     <label className="block text-sm font-semibold text-[#0A1128] mb-2">
@@ -221,8 +346,82 @@ export default function ScansPage() {
                       value={targetInput}
                       onChange={(e) => setTargetInput(e.target.value)}
                       required
+                      disabled={Boolean(selectedTarget)}
                     />
+                    {selectedTarget && (
+                      <p className="mt-2 text-xs text-gray-500">
+                        {selectedTarget.name} will be used for this scan. Toggle
+                        back to manual input to use another target.
+                      </p>
+                    )}
                   </div>
+
+                  {/* Save Target Option */}
+                  {selectedTargetId === CUSTOM_TARGET_ID && (
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 text-sm font-semibold text-[#0A1128]">
+                        <input
+                          type="checkbox"
+                          checked={saveTarget}
+                          onChange={(event) =>
+                            setSaveTarget(event.target.checked)
+                          }
+                          className="h-4 w-4"
+                        />
+                        Save this target for future scans
+                      </label>
+                      {saveTarget && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs text-gray-700 font-semibold">
+                              Target name
+                            </label>
+                            <input
+                              type="text"
+                              value={customTargetName}
+                              onChange={(event) =>
+                                setCustomTargetName(event.target.value)
+                              }
+                              placeholder="Optional friendly name"
+                              className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-700 font-semibold">
+                              Tags (comma separated)
+                            </label>
+                            <input
+                              type="text"
+                              value={customTargetTags}
+                              onChange={(event) =>
+                                setCustomTargetTags(event.target.value)
+                              }
+                              placeholder="production, api"
+                              className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-700 font-semibold">
+                              Target type
+                            </label>
+                            <select
+                              value={customTargetType}
+                              onChange={(event) =>
+                                setCustomTargetType(
+                                  event.target.value as SavedTarget["type"],
+                                )
+                              }
+                              className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
+                            >
+                              <option value="ip">IP</option>
+                              <option value="domain">Domain</option>
+                              <option value="url">URL</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* ZAP Profile */}
                   {scannerType === "zap" && (

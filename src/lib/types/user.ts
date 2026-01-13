@@ -41,6 +41,7 @@ export interface UserDocument {
   totalScansAllTime: number; // Lifetime counter
   lastScanDate?: Timestamp;
   lastMonthlyReset?: Timestamp; // Track when we last reset the counter
+  savedTargets?: SavedTarget[];
 
   // Feature Access Flags (for future use)
   features?: {
@@ -60,6 +61,14 @@ export interface UserDocument {
   companyName?: string;
 }
 
+export interface SavedTarget {
+  id: string;
+  name: string;
+  address: string;
+  type: "ip" | "domain" | "url";
+  tags?: string[];
+  createdAt?: Timestamp;
+}
 export interface ScanMetadata {
   scanId: string;
   type: "nmap" | "openvas" | "zap";
