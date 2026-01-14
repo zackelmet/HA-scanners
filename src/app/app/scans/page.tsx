@@ -52,7 +52,10 @@ export default function ScansPage() {
   useEffect(() => {
     if (selectedTarget) {
       // Show first address or all addresses joined for groups
-      setTargetInput(selectedTarget.addresses.join("\n"));
+      const addresses =
+        selectedTarget.addresses ||
+        (selectedTarget.address ? [selectedTarget.address] : []);
+      setTargetInput(addresses.join("\n"));
     }
   }, [selectedTarget]);
 
@@ -89,7 +92,9 @@ export default function ScansPage() {
     } else {
       const target = savedTargets.find((candidate) => candidate.id === value);
       if (target) {
-        setTargetInput(target.addresses.join("\n"));
+        const addresses =
+          target.addresses || (target.address ? [target.address] : []);
+        setTargetInput(addresses.join("\n"));
       }
     }
   };
@@ -461,15 +466,17 @@ export default function ScansPage() {
                         }
                       >
                         <option value={CUSTOM_TARGET_ID}>Enter manually</option>
-                        {savedTargets.map((target) => (
-                          <option key={target.id} value={target.id}>
-                            {target.name} ({target.addresses.length}{" "}
-                            {target.addresses.length === 1
-                              ? "target"
-                              : "targets"}
-                            )
-                          </option>
-                        ))}
+                        {savedTargets.map((target) => {
+                          const addresses =
+                            target.addresses ||
+                            (target.address ? [target.address] : []);
+                          return (
+                            <option key={target.id} value={target.id}>
+                              {target.name} ({addresses.length}{" "}
+                              {addresses.length === 1 ? "target" : "targets"})
+                            </option>
+                          );
+                        })}
                       </select>
                       {selectedTarget && (
                         <button

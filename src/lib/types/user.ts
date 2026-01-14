@@ -65,6 +65,7 @@ export interface SavedTarget {
   id: string;
   name: string;
   addresses: string[]; // Changed from 'address' to support multiple targets
+  address?: string; // Legacy field for backward compatibility
   type: "ip" | "domain" | "url" | "group";
   tags?: string[];
   createdAt?: Timestamp;
