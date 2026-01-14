@@ -21,9 +21,9 @@ const CUSTOM_TARGET_ID = "__custom_target__";
 
 export default function ScansPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("new");
-  const [scannerType, setScannerType] = useState<"nmap" | "openvas" | "zap">(
-    "nmap",
-  );
+  const [selectedScanners, setSelectedScanners] = useState<
+    ("nmap" | "openvas" | "zap")[]
+  >(["nmap"]);
   const [zapProfile, setZapProfile] = useState<"quick" | "active" | "full">(
     "active",
   );
@@ -64,9 +64,23 @@ export default function ScansPage() {
 
   useEffect(() => {
     if (selectedTargetId === CUSTOM_TARGET_ID) {
-      setCustomTargetType(scannerType === "zap" ? "url" : "ip");
+      // Set type based on selected scanners - if any scanner needs URL, use url, else ip
+      const needsUrl = selectedScanners.includes("zap");
+      setCustomTargetType(needsUrl ? "url" : "ip");
     }
-  }, [scannerType, selectedTargetId]);
+  }, [selectedScanners, selectedTargetId]);
+
+  const toggleScanner = (scanner: "nmap" | "openvas" | "zap") => {
+    setSelectedScanners((prev) => {
+      if (prev.includes(scanner)) {
+        // Don't allow deselecting if it's the only one
+        if (prev.length === 1) return prev;
+        return prev.filter((s) => s !== scanner);
+      } else {
+        return [...prev, scanner];
+      }
+    });
+  };
 
   const handleSavedTargetChange = (value: string) => {
     setSelectedTargetId(value);
@@ -173,10 +187,19 @@ export default function ScansPage() {
       return;
     }
 
+    if (selectedScanners.length === 0) {
+      setSubmitError("Please select at least one scanner type.");
+      setSubmitting(false);
+      return;
+    }
+
+    // Calculate total scans that will be created
+    const totalScans = targetAddresses.length * selectedScanners.length;
+
     // Show confirmation for large batches
-    if (targetAddresses.length > 10) {
+    if (totalScans > 10) {
       const confirmed = window.confirm(
-        `This will create ${targetAddresses.length} scans and use ${targetAddresses.length} from your monthly quota. Continue?`,
+        `This will create ${totalScans} scans (${targetAddresses.length} target(s) × ${selectedScanners.length} scanner(s)) and use ${totalScans} from your monthly quota. Continue?`,
       );
       if (!confirmed) {
         setSubmitting(false);
@@ -192,40 +215,77 @@ export default function ScansPage() {
       const nmapOptions = { topPorts: 100 };
       const zapOptions = { scanProfile: zapProfile };
 
-      const res = await fetch("/api/scans", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: scannerType,
-          target: targetAddresses, // Send array
-          options:
-            scannerType === "nmap"
-              ? nmapOptions
-              : scannerType === "zap"
-                ? zapOptions
-                : {},
-        }),
-      });
+      // Create scans for each selected scanner type
+      const results = [];
+      const errors = [];
 
-      const data = await res.json();
-      if (!res.ok) {
-        setSubmitError(data?.error || "Failed to create scan");
-      } else {
-        const scansCreated = data.scansCreated || 1;
-        setSubmitSuccess(
-          `${scansCreated} scan${scansCreated > 1 ? "s" : ""} queued${data.batchId ? " (batch " + data.batchId.substring(0, 8) + ")" : ""}`,
-        );
-        setTargetInput("");
-        setTimeout(() => setActiveTab("history"), 2000);
-        if (saveTarget && selectedTargetId === CUSTOM_TARGET_ID) {
-          try {
-            await persistCustomTarget(targetAddresses);
-          } catch (error) {
-            console.error("Failed to save target after scan", error);
+      for (const scannerType of selectedScanners) {
+        try {
+          const res = await fetch("/api/scans", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              type: scannerType,
+              target: targetAddresses, // Send array
+              options:
+                scannerType === "nmap"
+                  ? nmapOptions
+                  : scannerType === "zap"
+                    ? zapOptions
+                    : {},
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            errors.push(`${scannerType}: ${data?.error || "Failed"}`);
+          } else {
+            results.push({
+              scanner: scannerType,
+              scansCreated: data.scansCreated || 1,
+              batchId: data.batchId,
+            });
           }
+        } catch (err: any) {
+          errors.push(`${scannerType}: ${err.message}`);
+        }
+      }
+
+      if (errors.length > 0 && results.length === 0) {
+        setSubmitError(errors.join("; "));
+      } else if (errors.length > 0) {
+        setSubmitError(`Some scans failed: ${errors.join("; ")}`);
+        const totalCreated = results.reduce(
+          (sum, r) => sum + r.scansCreated,
+          0,
+        );
+        setSubmitSuccess(
+          `${totalCreated} scan${totalCreated > 1 ? "s" : ""} created successfully for ${results.map((r) => r.scanner.toUpperCase()).join(", ")}`,
+        );
+      } else {
+        const totalCreated = results.reduce(
+          (sum, r) => sum + r.scansCreated,
+          0,
+        );
+        setSubmitSuccess(
+          `${totalCreated} scan${totalCreated > 1 ? "s" : ""} queued across ${results.length} scanner type${results.length > 1 ? "s" : ""} (${results.map((r) => r.scanner.toUpperCase()).join(", ")})`,
+        );
+      }
+
+      setTargetInput("");
+      setTimeout(() => setActiveTab("history"), 2000);
+      if (
+        saveTarget &&
+        selectedTargetId === CUSTOM_TARGET_ID &&
+        results.length > 0
+      ) {
+        try {
+          await persistCustomTarget(targetAddresses);
+        } catch (error) {
+          console.error("Failed to save target after scan", error);
         }
       }
     } catch (err: any) {
@@ -309,28 +369,82 @@ export default function ScansPage() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  {/* Scanner Type */}
+                  {/* Scanner Types - Multi-select */}
                   <div>
-                    <label className="block text-sm font-semibold text-[#0A1128] mb-2">
-                      Scanner Type
+                    <label className="block text-sm font-semibold text-[#0A1128] mb-3">
+                      Scanner Types
+                      <span className="text-xs text-gray-500 font-normal ml-2">
+                        (select one or more)
+                      </span>
                     </label>
-                    <select
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00FED9] focus:border-transparent"
-                      value={scannerType}
-                      onChange={(e) =>
-                        setScannerType(
-                          e.target.value as "nmap" | "openvas" | "zap",
-                        )
-                      }
-                    >
-                      <option value="nmap">Nmap - Network Scanner</option>
-                      <option value="openvas">
-                        OpenVAS - Vulnerability Assessment
-                      </option>
-                      <option value="zap">
-                        OWASP ZAP - Web Application Scanner
-                      </option>
-                    </select>
+                    <div className="space-y-3">
+                      {/* Nmap Checkbox */}
+                      <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-[#00FED9] cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedScanners.includes("nmap")}
+                          onChange={() => toggleScanner("nmap")}
+                          className="mt-1 h-4 w-4 text-[#00FED9] rounded focus:ring-[#00FED9]"
+                        />
+                        <div className="flex-1">
+                          <div className="font-semibold text-[#0A1128]">
+                            Nmap - Network Scanner
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            Port scanning and service detection
+                          </div>
+                          <div className="text-xs text-[#00FED9] mt-1">
+                            {scannerRemaining("nmap")} /{" "}
+                            {userData?.scannerLimits?.nmap ?? 0} scans remaining
+                          </div>
+                        </div>
+                      </label>
+
+                      {/* OpenVAS Checkbox */}
+                      <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-[#00FED9] cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedScanners.includes("openvas")}
+                          onChange={() => toggleScanner("openvas")}
+                          className="mt-1 h-4 w-4 text-[#00FED9] rounded focus:ring-[#00FED9]"
+                        />
+                        <div className="flex-1">
+                          <div className="font-semibold text-[#0A1128]">
+                            OpenVAS - Vulnerability Assessment
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            CVE detection and security analysis
+                          </div>
+                          <div className="text-xs text-[#00FED9] mt-1">
+                            {scannerRemaining("openvas")} /{" "}
+                            {userData?.scannerLimits?.openvas ?? 0} scans
+                            remaining
+                          </div>
+                        </div>
+                      </label>
+
+                      {/* ZAP Checkbox */}
+                      <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-[#00FED9] cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedScanners.includes("zap")}
+                          onChange={() => toggleScanner("zap")}
+                          className="mt-1 h-4 w-4 text-[#00FED9] rounded focus:ring-[#00FED9]"
+                        />
+                        <div className="flex-1">
+                          <div className="font-semibold text-[#0A1128]">
+                            OWASP ZAP - Web Application Scanner
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            Web vulnerabilities and OWASP Top 10
+                          </div>
+                          <div className="text-xs text-[#00FED9] mt-1">
+                            {scannerRemaining("zap")} /{" "}
+                            {userData?.scannerLimits?.zap ?? 0} scans remaining
+                          </div>
+                        </div>
+                      </label>
+                    </div>
                   </div>
 
                   {/* Saved Targets */}
@@ -389,18 +503,20 @@ export default function ScansPage() {
                   {/* Target Input */}
                   <div>
                     <label className="block text-sm font-semibold text-[#0A1128] mb-2">
-                      {scannerType === "zap"
+                      {selectedScanners.includes("zap") &&
+                      selectedScanners.length === 1
                         ? "Target URL(s)"
-                        : "Target IP/Domain(s)"}
+                        : "Target IP/Domain/URL(s)"}
                       <span className="text-xs text-gray-500 font-normal ml-2">
                         (one per line for multiple targets)
                       </span>
                     </label>
                     <textarea
                       placeholder={
-                        scannerType === "zap"
+                        selectedScanners.includes("zap") &&
+                        selectedScanners.length === 1
                           ? "e.g., https://example.com\nhttps://test.com"
-                          : "e.g., 192.168.1.1\nexample.com\n10.0.0.5"
+                          : "e.g., 192.168.1.1\nexample.com\nhttps://test.com"
                       }
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00FED9] focus:border-transparent font-mono text-sm"
                       value={targetInput}
@@ -493,7 +609,7 @@ export default function ScansPage() {
                   )}
 
                   {/* ZAP Profile */}
-                  {scannerType === "zap" && (
+                  {selectedScanners.includes("zap") && (
                     <div>
                       <label className="block text-sm font-semibold text-[#0A1128] mb-2">
                         Scan Profile
@@ -520,13 +636,15 @@ export default function ScansPage() {
 
                   {/* Remaining Scans */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm text-gray-700">
-                      <strong>
-                        Scans remaining ({scannerType.toUpperCase()}):
-                      </strong>{" "}
-                      {scannerRemaining(scannerType)} /{" "}
-                      {userData?.scannerLimits?.[scannerType] ?? 0}
+                    <p className="text-sm text-gray-700 mb-2">
+                      <strong>Scans Remaining:</strong>
                     </p>
+                    {selectedScanners.map((scanner) => (
+                      <p key={scanner} className="text-sm text-gray-700 ml-2">
+                        • {scanner.toUpperCase()}: {scannerRemaining(scanner)} /{" "}
+                        {userData?.scannerLimits?.[scanner] ?? 0}
+                      </p>
+                    ))}
                   </div>
 
                   {/* Submit Button */}
