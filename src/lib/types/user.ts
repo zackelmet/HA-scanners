@@ -64,8 +64,8 @@ export interface UserDocument {
 export interface SavedTarget {
   id: string;
   name: string;
-  address: string;
-  type: "ip" | "domain" | "url";
+  addresses: string[]; // Changed from 'address' to support multiple targets
+  type: "ip" | "domain" | "url" | "group";
   tags?: string[];
   createdAt?: Timestamp;
 }
@@ -74,6 +74,7 @@ export interface ScanMetadata {
   type: "nmap" | "openvas" | "zap";
   target: string;
   status: "queued" | "running" | "completed" | "failed";
+  batchId?: string; // Groups scans from the same multi-target job
   startTime: Timestamp;
   endTime?: Timestamp;
   resultsSummary?: {

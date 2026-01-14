@@ -17,11 +17,11 @@ import { useUserData } from "@/lib/hooks/useUserData";
 import { db } from "@/lib/firebase/firebaseClient";
 import { SavedTarget } from "@/lib/types/user";
 
-const TARGET_TYPES: SavedTarget["type"][] = ["ip", "domain", "url"];
+const TARGET_TYPES: SavedTarget["type"][] = ["ip", "domain", "url", "group"];
 
 const EMPTY_FORM = {
   name: "",
-  address: "",
+  addresses: "", // Will be split on newlines
   type: "ip" as SavedTarget["type"],
   tags: "",
 };
@@ -42,7 +42,7 @@ export default function TargetsPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     name: "",
-    address: "",
+    addresses: "", // String representation for textarea
     type: "ip" as SavedTarget["type"],
     tags: "",
   });
@@ -64,11 +64,15 @@ export default function TargetsPage() {
       return;
     }
 
-    const address = formState.address.trim();
-    if (!address) {
+    const addressLines = formState.addresses
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (addressLines.length === 0) {
       setFeedback({
         type: "error",
-        message: "Please provide an IP, URL, or domain.",
+        message: "Please provide at least one IP, URL, or domain.",
       });
       return;
     }
@@ -80,13 +84,21 @@ export default function TargetsPage() {
       .map((tag) => tag.trim())
       .filter(Boolean);
 
+    // Determine type based on count and user selection
+    const targetType = addressLines.length > 1 ? "group" : formState.type;
+    const displayName =
+      formState.name.trim() ||
+      (addressLines.length === 1
+        ? addressLines[0]
+        : `${addressLines.length} targets`);
+
     const newTarget: SavedTarget = {
       id: crypto.randomUUID
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random()}`,
-      name: formState.name.trim() || address,
-      address,
-      type: formState.type,
+      name: displayName,
+      addresses: addressLines,
+      type: targetType,
       tags: parsedTags,
     };
 
@@ -99,7 +111,7 @@ export default function TargetsPage() {
       setFormState(EMPTY_FORM);
       setFeedback({
         type: "success",
-        message: "Target saved to your profile.",
+        message: `Target${addressLines.length > 1 ? " group" : ""} saved to your profile.`,
       });
     } catch (error) {
       console.error("Failed to save target", error);
@@ -119,7 +131,7 @@ export default function TargetsPage() {
     setEditingTarget(target);
     setEditForm({
       name: target.name,
-      address: target.address,
+      addresses: target.addresses.join("\n"),
       type: target.type,
       tags: (target.tags ?? []).join(", "),
     });
@@ -135,9 +147,13 @@ export default function TargetsPage() {
     event.preventDefault();
     if (!editingTarget || !currentUser) return;
 
-    const trimmedAddress = editForm.address.trim();
-    if (!trimmedAddress) {
-      setEditError("Address cannot be empty.");
+    const addressLines = editForm.addresses
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (addressLines.length === 0) {
+      setEditError("At least one address is required.");
       return;
     }
 
@@ -149,13 +165,20 @@ export default function TargetsPage() {
       .map((tag) => tag.trim())
       .filter(Boolean);
 
+    const targetType = addressLines.length > 1 ? "group" : editForm.type;
+    const displayName =
+      editForm.name.trim() ||
+      (addressLines.length === 1
+        ? addressLines[0]
+        : `${addressLines.length} targets`);
+
     const updatedTargets = savedTargets.map((target) =>
       target.id === editingTarget.id
         ? {
             ...target,
-            name: editForm.name.trim() || trimmedAddress,
-            address: trimmedAddress,
-            type: editForm.type,
+            name: displayName,
+            addresses: addressLines,
+            type: targetType,
             tags: parsedTags,
           }
         : target,
@@ -232,20 +255,24 @@ export default function TargetsPage() {
                   className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
                 />
               </label>
-              <label className="flex flex-col">
+              <label className="flex flex-col md:col-span-2">
                 <span className="text-sm font-semibold text-gray-700">
-                  Address (IP / URL / FQDN)
+                  Addresses (one per line)
                 </span>
-                <input
-                  type="text"
-                  value={formState.address}
+                <textarea
+                  value={formState.addresses}
                   onChange={(event) =>
-                    handleInputChange("address", event.target.value)
+                    handleInputChange("addresses", event.target.value)
                   }
                   required
-                  placeholder="192.168.1.1 or example.com"
-                  className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
+                  placeholder="192.168.1.1&#10;example.com&#10;https://test.com"
+                  rows={4}
+                  className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9] font-mono text-sm"
                 />
+                <span className="text-xs text-gray-500 mt-1">
+                  Enter one address per line. Multiple addresses will create a
+                  target group.
+                </span>
               </label>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -285,7 +312,7 @@ export default function TargetsPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <button
                 type="submit"
-                disabled={saving || !currentUser || !formState.address.trim()}
+                disabled={saving || !currentUser || !formState.addresses.trim()}
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#00FED9] text-[#0A1128] font-semibold rounded-lg hover:bg-[#00D4B8] transition-colors disabled:bg-gray-300 disabled:text-gray-500"
               >
                 <FontAwesomeIcon icon={faPlus} />
@@ -351,9 +378,24 @@ export default function TargetsPage() {
                   <h3 className="font-semibold text-lg text-[#0A1128] mb-1">
                     {target.name}
                   </h3>
-                  <p className="text-gray-600 text-sm font-mono mb-2">
-                    {target.address}
-                  </p>
+                  {target.addresses.length === 1 ? (
+                    <p className="text-gray-600 text-sm font-mono mb-2">
+                      {target.addresses[0]}
+                    </p>
+                  ) : (
+                    <div className="text-gray-600 text-sm mb-2">
+                      <p className="font-semibold text-[#00FED9] mb-1">
+                        {target.addresses.length} addresses
+                      </p>
+                      <div className="max-h-20 overflow-y-auto font-mono text-xs space-y-0.5">
+                        {target.addresses.map((addr, idx) => (
+                          <div key={idx} className="text-gray-500">
+                            {addr}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <p className="text-xs uppercase tracking-[0.2em] text-[#00FED9] mb-3">
                     {target.type}
                   </p>
@@ -406,21 +448,21 @@ export default function TargetsPage() {
                     className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
                   />
                 </label>
-                <label className="flex flex-col">
+                <label className="flex flex-col md:col-span-2">
                   <span className="text-sm font-semibold text-gray-700">
-                    Address (IP / URL / FQDN)
+                    Addresses (one per line)
                   </span>
-                  <input
-                    type="text"
-                    value={editForm.address}
+                  <textarea
+                    value={editForm.addresses}
                     onChange={(event) =>
                       setEditForm((prev) => ({
                         ...prev,
-                        address: event.target.value,
+                        addresses: event.target.value,
                       }))
                     }
                     required
-                    className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
+                    rows={4}
+                    className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9] font-mono text-sm"
                   />
                 </label>
               </div>

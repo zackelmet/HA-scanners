@@ -51,7 +51,8 @@ export default function ScansPage() {
 
   useEffect(() => {
     if (selectedTarget) {
-      setTargetInput(selectedTarget.address);
+      // Show first address or all addresses joined for groups
+      setTargetInput(selectedTarget.addresses.join("\n"));
     }
   }, [selectedTarget]);
 
@@ -74,7 +75,7 @@ export default function ScansPage() {
     } else {
       const target = savedTargets.find((candidate) => candidate.id === value);
       if (target) {
-        setTargetInput(target.address);
+        setTargetInput(target.addresses.join("\n"));
       }
     }
   };
@@ -121,22 +122,24 @@ export default function ScansPage() {
     return `${hours}h ${minutes % 60}m`;
   };
 
-  const persistCustomTarget = async (address: string) => {
+  const persistCustomTarget = async (addresses: string[]) => {
     if (!currentUser) return;
     const userRef = doc(db, "users", currentUser.uid);
     const parsedTags = customTargetTags
       .split(",")
       .map((tag) => tag.trim())
       .filter(Boolean);
-    const targetName = customTargetName.trim() || address;
+    const targetName =
+      customTargetName.trim() ||
+      (addresses.length === 1 ? addresses[0] : `${addresses.length} targets`);
     const newTarget: SavedTarget = {
       id:
         typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
           ? crypto.randomUUID()
           : `${Date.now()}-${Math.random()}`,
       name: targetName,
-      address,
-      type: customTargetType,
+      addresses,
+      type: addresses.length > 1 ? "group" : customTargetType,
       tags: parsedTags,
     };
     const updatedTargets = [...savedTargets, newTarget];
@@ -154,13 +157,31 @@ export default function ScansPage() {
     setSubmitSuccess(null);
     setSubmitting(true);
 
-    const targetAddress = selectedTarget?.address ?? targetInput.trim();
-    if (!targetAddress) {
+    // Get targets - either from saved target or custom input
+    const targetAddresses =
+      selectedTarget?.addresses ??
+      targetInput
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    if (targetAddresses.length === 0) {
       setSubmitError(
-        "Provide an IP address, domain, or URL before launching a scan.",
+        "Provide at least one IP address, domain, or URL before launching a scan.",
       );
       setSubmitting(false);
       return;
+    }
+
+    // Show confirmation for large batches
+    if (targetAddresses.length > 10) {
+      const confirmed = window.confirm(
+        `This will create ${targetAddresses.length} scans and use ${targetAddresses.length} from your monthly quota. Continue?`,
+      );
+      if (!confirmed) {
+        setSubmitting(false);
+        return;
+      }
     }
 
     try {
@@ -179,7 +200,7 @@ export default function ScansPage() {
         },
         body: JSON.stringify({
           type: scannerType,
-          target: targetAddress,
+          target: targetAddresses, // Send array
           options:
             scannerType === "nmap"
               ? nmapOptions
@@ -193,12 +214,15 @@ export default function ScansPage() {
       if (!res.ok) {
         setSubmitError(data?.error || "Failed to create scan");
       } else {
-        setSubmitSuccess(`Scan queued: ${data.scanId || "queued"}`);
+        const scansCreated = data.scansCreated || 1;
+        setSubmitSuccess(
+          `${scansCreated} scan${scansCreated > 1 ? "s" : ""} queued${data.batchId ? " (batch " + data.batchId.substring(0, 8) + ")" : ""}`,
+        );
         setTargetInput("");
         setTimeout(() => setActiveTab("history"), 2000);
         if (saveTarget && selectedTargetId === CUSTOM_TARGET_ID) {
           try {
-            await persistCustomTarget(targetAddress);
+            await persistCustomTarget(targetAddresses);
           } catch (error) {
             console.error("Failed to save target after scan", error);
           }
@@ -325,7 +349,11 @@ export default function ScansPage() {
                         <option value={CUSTOM_TARGET_ID}>Enter manually</option>
                         {savedTargets.map((target) => (
                           <option key={target.id} value={target.id}>
-                            {target.name} ({target.address})
+                            {target.name} ({target.addresses.length}{" "}
+                            {target.addresses.length === 1
+                              ? "target"
+                              : "targets"}
+                            )
                           </option>
                         ))}
                       </select>
@@ -343,7 +371,17 @@ export default function ScansPage() {
                     </div>
                     {selectedTarget && (
                       <p className="text-xs text-gray-500">
-                        Using saved target: {selectedTarget.address}
+                        Using saved target:{" "}
+                        {selectedTarget.addresses.length === 1
+                          ? selectedTarget.addresses[0]
+                          : `${selectedTarget.addresses.length} addresses`}
+                        {selectedTarget.addresses.length > 1 && (
+                          <span className="block mt-1 font-mono text-xs">
+                            {selectedTarget.addresses.slice(0, 3).join(", ")}
+                            {selectedTarget.addresses.length > 3 &&
+                              ` ... +${selectedTarget.addresses.length - 3} more`}
+                          </span>
+                        )}
                       </p>
                     )}
                   </div>
@@ -352,21 +390,24 @@ export default function ScansPage() {
                   <div>
                     <label className="block text-sm font-semibold text-[#0A1128] mb-2">
                       {scannerType === "zap"
-                        ? "Target URL"
-                        : "Target IP/Domain"}
+                        ? "Target URL(s)"
+                        : "Target IP/Domain(s)"}
+                      <span className="text-xs text-gray-500 font-normal ml-2">
+                        (one per line for multiple targets)
+                      </span>
                     </label>
-                    <input
-                      type="text"
+                    <textarea
                       placeholder={
                         scannerType === "zap"
-                          ? "e.g., https://example.com"
-                          : "e.g., 192.168.1.1 or example.com"
+                          ? "e.g., https://example.com\nhttps://test.com"
+                          : "e.g., 192.168.1.1\nexample.com\n10.0.0.5"
                       }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00FED9] focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00FED9] focus:border-transparent font-mono text-sm"
                       value={targetInput}
                       onChange={(e) => setTargetInput(e.target.value)}
                       required
                       disabled={Boolean(selectedTarget)}
+                      rows={4}
                     />
                     {selectedTarget && (
                       <p className="mt-2 text-xs text-gray-500">
@@ -374,6 +415,14 @@ export default function ScansPage() {
                         back to manual input to use another target.
                       </p>
                     )}
+                    {!selectedTarget &&
+                      targetInput.split("\n").filter(Boolean).length > 1 && (
+                        <p className="mt-2 text-xs text-[#00FED9] font-semibold">
+                          ⚠️ This will create{" "}
+                          {targetInput.split("\n").filter(Boolean).length} scans
+                          and use that many from your monthly quota.
+                        </p>
+                      )}
                   </div>
 
                   {/* Save Target Option */}
@@ -561,9 +610,19 @@ export default function ScansPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {userScans.map((scan: any) => (
-                      <tr key={scan.scanId} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 text-sm text-gray-900 font-mono">
-                          {scan.scanId.substring(0, 8)}
+                      <tr
+                        key={scan.scanId}
+                        className={`hover:bg-gray-50 ${scan.batchId ? "border-l-4 border-l-[#00FED9]" : ""}`}
+                      >
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          <div className="font-mono">
+                            {scan.scanId.substring(0, 8)}
+                          </div>
+                          {scan.batchId && (
+                            <div className="text-xs text-[#00FED9] mt-1">
+                              batch: {scan.batchId.substring(0, 8)}
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4">
                           <span className="px-2 py-1 bg-[#0A1128] text-white text-xs font-semibold rounded uppercase">

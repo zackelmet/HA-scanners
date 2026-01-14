@@ -56,6 +56,17 @@ export async function POST(request: NextRequest) {
     // Debug logging
     console.log("Scan request received:", { userId, type, target, options });
 
+    // Normalize target to array
+    const targetArray = Array.isArray(target) ? target : [target];
+
+    // Validate we have at least one target
+    if (targetArray.length === 0 || !targetArray[0]) {
+      return NextResponse.json(
+        { error: "Missing required field: target" },
+        { status: 400 },
+      );
+    }
+
     // Normalize options (client may send empty string or null)
     const normalizedOptions =
       options == null
@@ -65,13 +76,10 @@ export async function POST(request: NextRequest) {
           : options;
 
     // Validate input (options are optional)
-    if (!type || !target) {
-      console.log("Validation failed: Missing type or target", {
-        type,
-        target,
-      });
+    if (!type) {
+      console.log("Validation failed: Missing type", { type });
       return NextResponse.json(
-        { error: "Missing required fields: type, target" },
+        { error: "Missing required field: type" },
         { status: 400 },
       );
     }
@@ -93,59 +101,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse and normalize target based on scanner type
-    let normalizedTarget = target.trim();
+    // Function to normalize and validate a single target
+    const normalizeTarget = (targetStr: string): string | null => {
+      let normalized = targetStr.trim();
 
-    if (type === "zap") {
-      // ZAP requires full URLs with protocol
-      // If user didn't provide protocol, add http://
-      if (!/^https?:\/\//i.test(normalizedTarget)) {
-        normalizedTarget = `http://${normalizedTarget}`;
+      if (type === "zap") {
+        // ZAP requires full URLs with protocol
+        if (!/^https?:\/\//i.test(normalized)) {
+          normalized = `http://${normalized}`;
+        }
+
+        // Validate it's a proper URL
+        try {
+          new URL(normalized);
+          return normalized;
+        } catch (e) {
+          console.log("Invalid ZAP target format:", normalized);
+          return null;
+        }
+      } else {
+        // OpenVAS and Nmap need just the hostname/IP (no protocol, no path)
+        normalized = normalized.replace(/^https?:\/\//i, "");
+        normalized = normalized.replace(/:\d+.*$/, "");
+        normalized = normalized.replace(/\/.*$/, "");
+
+        // Validate the resulting hostname or IP
+        const ipPattern = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+        const domainPattern =
+          /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+        if (ipPattern.test(normalized) || domainPattern.test(normalized)) {
+          return normalized;
+        } else {
+          console.log("Invalid network scanner target format:", normalized);
+          return null;
+        }
       }
+    };
 
-      // Validate it's a proper URL
-      try {
-        new URL(normalizedTarget);
-      } catch (e) {
-        console.log("Invalid ZAP target format:", normalizedTarget);
+    // Normalize all targets
+    const normalizedTargets: string[] = [];
+    for (const t of targetArray) {
+      const normalized = normalizeTarget(t);
+      if (!normalized) {
         return NextResponse.json(
           {
-            error:
-              "Invalid target format. Must be a valid URL (e.g., example.com, http://example.com, or https://example.com)",
+            error: `Invalid target format: ${t}. ${type === "zap" ? "Must be a valid URL" : "Must be a valid IP address or domain name"}`,
           },
           { status: 400 },
         );
       }
-    } else {
-      // OpenVAS and Nmap need just the hostname/IP (no protocol, no path)
-      // Strip protocol if present
-      normalizedTarget = normalizedTarget.replace(/^https?:\/\//i, "");
-
-      // Strip port if present (extract it for later if needed)
-      const portMatch = normalizedTarget.match(/:(\d+)/);
-      normalizedTarget = normalizedTarget.replace(/:\d+.*$/, "");
-
-      // Strip path/query if present
-      normalizedTarget = normalizedTarget.replace(/\/.*$/, "");
-
-      // Validate the resulting hostname or IP
-      const ipPattern = /^(?:\d{1,3}\.){3}\d{1,3}$/;
-      const domainPattern =
-        /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-
-      if (
-        !ipPattern.test(normalizedTarget) &&
-        !domainPattern.test(normalizedTarget)
-      ) {
-        console.log("Invalid network scanner target format:", normalizedTarget);
-        return NextResponse.json(
-          {
-            error:
-              "Invalid target format. Must be a valid IP address or domain name",
-          },
-          { status: 400 },
-        );
-      }
+      normalizedTargets.push(normalized);
     }
 
     // Check user's subscription status
@@ -199,13 +205,19 @@ export async function POST(request: NextRequest) {
         userData.scannersUsedThisMonth[scanner]) ||
       0;
 
-    if (usedThisMonth >= scannerLimit) {
+    // Check if user has enough quota for all targets
+    const scansNeeded = normalizedTargets.length;
+    const remainingQuota = scannerLimit - usedThisMonth;
+
+    if (remainingQuota < scansNeeded) {
       return NextResponse.json(
         {
-          error: "Monthly scanner quota reached",
-          message: `You have used ${usedThisMonth}/${scannerLimit} ${scanner} scans this month. Upgrade your plan for more scans.`,
+          error: "Insufficient scanner quota",
+          message: `This ${scansNeeded > 1 ? `batch requires ${scansNeeded} scans but you only have ${remainingQuota} ${scanner} scans remaining` : `scan would exceed your monthly quota of ${scannerLimit} ${scanner} scans`}. Upgrade your plan for more scans.`,
           scansUsed: usedThisMonth,
           scanLimit: scannerLimit,
+          scansNeeded,
+          remainingQuota,
           scanner: scanner,
           currentPlan: userData.currentPlan,
         },
@@ -213,8 +225,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create scan and atomically increment per-scanner usage counters
-    let scanRef: any = null;
+    // Generate batch ID if multiple targets
+    const batchId =
+      normalizedTargets.length > 1
+        ? crypto.randomUUID
+          ? crypto.randomUUID()
+          : `batch-${Date.now()}`
+        : undefined;
+
+    // Create scans for all targets atomically
+    const scanRefs: any[] = [];
     try {
       await firestore.runTransaction(async (tx) => {
         const freshUser = (await tx.get(userDocRef)).data() as any;
@@ -227,42 +247,50 @@ export async function POST(request: NextRequest) {
         const currentLimit =
           (freshUser.scannerLimits && freshUser.scannerLimits[scanner]) ||
           userScannerLimits[scanner];
-        if (currentUsed >= currentLimit) {
+        const currentRemaining = currentLimit - currentUsed;
+
+        if (currentRemaining < scansNeeded) {
           throw new Error("QuotaExceeded");
         }
 
         const scansCollectionRef = firestore.collection("scans");
-        const newScanRef = scansCollectionRef.doc();
-        tx.set(newScanRef, {
-          userId,
-          type,
-          target: normalizedTarget,
-          options: normalizedOptions,
-          status: "queued",
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
 
-        // Increment per-scanner usage counters on user doc
+        // Create one scan doc per target
+        for (const normalizedTarget of normalizedTargets) {
+          const newScanRef = scansCollectionRef.doc();
+          tx.set(newScanRef, {
+            userId,
+            type,
+            target: normalizedTarget,
+            batchId,
+            options: normalizedOptions,
+            status: "queued",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          scanRefs.push(newScanRef);
+        }
+
+        // Increment per-scanner usage counters on user doc (by scansNeeded count)
         tx.update(userDocRef, {
           [`scannersUsedThisMonth.${scanner}`]:
-            admin.firestore.FieldValue.increment(1),
-          scansThisMonth: admin.firestore.FieldValue.increment(1),
-          totalScansAllTime: admin.firestore.FieldValue.increment(1),
+            admin.firestore.FieldValue.increment(scansNeeded),
+          scansThisMonth: admin.firestore.FieldValue.increment(scansNeeded),
+          totalScansAllTime: admin.firestore.FieldValue.increment(scansNeeded),
           lastScanDate: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
-
-        scanRef = newScanRef;
       });
     } catch (err: any) {
       if (err && err.message === "QuotaExceeded") {
         return NextResponse.json(
           {
-            error: "Monthly scanner quota reached",
-            message: `You have used ${usedThisMonth}/${scannerLimit} ${scanner} scans this month. Upgrade your plan for more scans.`,
+            error: "Insufficient scanner quota",
+            message: `Batch requires ${scansNeeded} scans but you only have ${remainingQuota} ${scanner} scans remaining. Upgrade your plan for more scans.`,
             scansUsed: usedThisMonth,
             scanLimit: scannerLimit,
+            scansNeeded,
+            remainingQuota,
             currentPlan: userData.currentPlan,
           },
           { status: 429 },
@@ -275,90 +303,119 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prepare per-user subcollection ref for scalable per-user queries
-    const userScanRef = firestore
-      .collection("users")
-      .doc(userId)
-      .collection("completedScans")
-      .doc(scanRef.id);
-
+    // Create per-user subcollection docs for all scans
     try {
-      await userScanRef.set({
-        scanId: scanRef.id,
-        status: "queued",
-        type,
-        target: normalizedTarget,
-        startTime: admin.firestore.FieldValue.serverTimestamp(),
-        resultsSummary: null,
-        gcpStorageUrl: null,
-        errorMessage: null,
-      });
+      const batch = firestore.batch();
+      for (let i = 0; i < scanRefs.length; i++) {
+        const scanRef = scanRefs[i];
+        const normalizedTarget = normalizedTargets[i];
+        const userScanRef = firestore
+          .collection("users")
+          .doc(userId)
+          .collection("completedScans")
+          .doc(scanRef.id);
+
+        batch.set(userScanRef, {
+          scanId: scanRef.id,
+          status: "queued",
+          type,
+          target: normalizedTarget,
+          batchId,
+          startTime: admin.firestore.FieldValue.serverTimestamp(),
+          resultsSummary: null,
+          gcpStorageUrl: null,
+          errorMessage: null,
+        });
+      }
+      await batch.commit();
     } catch (err) {
-      console.error("Failed to write user subcollection scan doc:", err);
+      console.error("Failed to write user subcollection scan docs:", err);
     }
 
-    // Enqueue the scan job to Cloud Tasks (Cloud Run worker will process it)
-    let enqueueSucceeded = false;
-    try {
-      const tasksModule = await import("@/lib/gcp/scannerClient");
-      const enqueue = tasksModule.enqueueScanJob;
-      if (enqueue) {
-        await enqueue({
+    // Enqueue all scan jobs
+    let enqueueSuccessCount = 0;
+    const tasksModule = await import("@/lib/gcp/scannerClient");
+    const enqueue = tasksModule.enqueueScanJob;
+
+    if (enqueue) {
+      const enqueuePromises = scanRefs.map((scanRef, i) =>
+        enqueue({
           scanId: scanRef.id,
           userId,
           type,
-          target: normalizedTarget,
+          target: normalizedTargets[i],
           options: normalizedOptions,
           callbackUrl: process.env.VERCEL_WEBHOOK_URL || "",
-        });
-        enqueueSucceeded = true;
+        })
+          .then(() => {
+            enqueueSuccessCount++;
+            return scanRef.id;
+          })
+          .catch((err) => {
+            console.error(`Failed to enqueue scan job ${scanRef.id}:`, err);
+            return null;
+          }),
+      );
+
+      const enqueueResults = await Promise.all(enqueuePromises);
+      const successfulScanIds = enqueueResults.filter((id) => id !== null);
+
+      // Mark successfully enqueued scans as in-progress
+      if (successfulScanIds.length > 0) {
+        try {
+          const batch = firestore.batch();
+          const now = admin.firestore.FieldValue.serverTimestamp();
+
+          for (const scanId of successfulScanIds) {
+            batch.update(firestore.collection("scans").doc(scanId as string), {
+              status: "in_progress",
+              startTime: now,
+              updatedAt: now,
+            });
+
+            batch.update(
+              firestore
+                .collection("users")
+                .doc(userId)
+                .collection("completedScans")
+                .doc(scanId as string),
+              {
+                status: "in_progress",
+                startTime: now,
+                updatedAt: now,
+              },
+            );
+          }
+
+          await batch.commit();
+        } catch (err) {
+          console.error("Failed to mark scans in_progress after enqueue:", err);
+        }
       }
-    } catch (err) {
-      console.error("Failed to enqueue scan job:", err);
-      // We don't fail the request here — the scan doc + metadata exist. Return
-      // partial success but include a warning so UI can inform the user.
     }
 
-    // If enqueue succeeded, mark scan as in-progress so the UI shows it
-    if (enqueueSucceeded) {
-      try {
-        const now = admin.firestore.FieldValue.serverTimestamp();
-        await firestore.collection("scans").doc(scanRef.id).update({
-          status: "in_progress",
-          startTime: now,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        await userScanRef.update({
-          status: "in_progress",
-          startTime: now,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-      } catch (err) {
-        console.error("Failed to mark scan in_progress after enqueue:", err);
-      }
-    }
-
-    // Compute remaining for the requested scanner after this queued scan
-    const prevUsedCount =
-      (userData.scannersUsedThisMonth &&
-        userData.scannersUsedThisMonth[scanner]) ||
-      usedThisMonth;
-    const remainingAfter = Math.max(0, scannerLimit - (prevUsedCount + 1));
+    // Compute remaining quota
+    const remainingAfter = Math.max(
+      0,
+      scannerLimit - (usedThisMonth + scansNeeded),
+    );
 
     return NextResponse.json(
       {
         success: true,
-        scanId: scanRef.id,
-        message: "Scan created and queued for processing",
-        scan: {
-          id: scanRef.id,
+        batchId,
+        scanIds: scanRefs.map((ref) => ref.id),
+        scansCreated: scanRefs.length,
+        scansEnqueued: enqueueSuccessCount,
+        message: `${scanRefs.length} scan${scanRefs.length > 1 ? "s" : ""} created and ${enqueueSuccessCount > 0 ? "queued for processing" : "saved (enqueue failed)"}`,
+        scans: scanRefs.map((ref, i) => ({
+          id: ref.id,
           type,
-          target,
+          target: normalizedTargets[i],
           status: "queued",
-        },
+        })),
         scanner,
-        scansUsed: prevUsedCount + 1,
+        scansUsed: usedThisMonth + scansNeeded,
         scanLimit: scannerLimit,
         scansRemaining: remainingAfter,
       },

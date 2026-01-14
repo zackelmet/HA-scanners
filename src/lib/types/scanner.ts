@@ -113,7 +113,7 @@ export interface ScanSummary {
 
 export interface CreateScanRequest {
   type: ScanType;
-  target: string;
+  target: string | string[]; // Support single or multiple targets
   options: NmapOptions | OpenVASOptions | ZapOptions;
 }
 
