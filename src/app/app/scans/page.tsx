@@ -639,7 +639,7 @@ export default function ScansPage() {
                     <p className="text-sm text-gray-700 mb-2">
                       <strong>Scans Remaining:</strong>
                     </p>
-                    {selectedScanners.map((scanner) => (
+                    {selectedScanners?.map((scanner) => (
                       <p key={scanner} className="text-sm text-gray-700 ml-2">
                         • {scanner.toUpperCase()}: {scannerRemaining(scanner)} /{" "}
                         {userData?.scannerLimits?.[scanner] ?? 0}
