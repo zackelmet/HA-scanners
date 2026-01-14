@@ -71,10 +71,132 @@ Required environment variables (for frontend/backends to set)
 Smoke test note
 - Backend reported a successful smoke test for Nmap: request returned `{"scanId":"test-nmap-scan-456","success":true}`.
 
-Troubleshooting
-- If the frontend logs `Scanner URL for type 'nmap' is not configured in environment variables.` ensure `GCP_NMAP_SCANNER_URL` is set in Vercel.
-- For timeouts or failures, check Cloud Run / Cloud Function logs and verify the target is reachable and the service is not hitting runtime limits.
+---
 
-Frontend action items
+## Cloud Run Deployment & Configuration
+
+**Service Details**
+- **Service Name**: `nmap-scanner`
+- **URL**: `https://nmap-scanner-g3256mphxa-uc.a.run.app`
+- **Project**: `hosted-scanners`
+- **Region**: `us-central1`
+- **Platform**: Cloud Run (managed)
+
+**Required Cloud Run Environment Variables**
+
+The Cloud Run service **must** have these environment variables configured for webhooks to work:
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `VERCEL_WEBHOOK_URL` | `https://ha-scanners.vercel.app/api/scans/webhook` | Webhook endpoint for scan completion |
+| `GCP_WEBHOOK_SECRET` | `26b3018a3329ac8b92b35f5d9c29c1f83b211219cd8ba79e47a494db` | Webhook authentication secret |
+| `GCP_BUCKET_NAME` | `hosted-scanners-reports` | GCS bucket for scan results |
+| `GCP_PROJECT` | `hosted-scanners` | GCP project ID |
+
+**⚠️ CRITICAL**: If these environment variables are missing or incorrect, scans will get stuck in `in_progress` state because the webhook won't be sent or will be rejected by the backend.
+
+### Deployment Commands
+
+**Method 1: Update environment variables** (recommended - fixes the webhook issue):
+```bash
+gcloud run services update nmap-scanner \
+  --region=us-central1 \
+  --update-env-vars="VERCEL_WEBHOOK_URL=https://ha-scanners.vercel.app/api/scans/webhook,GCP_WEBHOOK_SECRET=26b3018a3329ac8b92b35f5d9c29c1f83b211219cd8ba79e47a494db,GCP_BUCKET_NAME=hosted-scanners-reports,GCP_PROJECT=hosted-scanners"
+```
+This updates the running service without requiring Artifact Registry access or rebuilding the container.
+
+**Method 2: Using GCP Console** (no CLI needed):
+1. Go to [Cloud Run Console](https://console.cloud.google.com/run?project=hosted-scanners)
+2. Click `nmap-scanner` service → **"EDIT & DEPLOY NEW REVISION"**
+3. Under **"Variables & Secrets"** tab, add/update the environment variables above
+4. Click **"DEPLOY"**
+
+**Method 3: Full code redeployment** (only if you changed main.py):
+If you need to deploy code changes, build locally and push to GCR:
+```bash
+cd gcp/functions/nmap-scanner
+
+# Build image locally
+docker build -t gcr.io/hosted-scanners-30b84/nmap-scanner:latest .
+
+# Push to GCR
+docker push gcr.io/hosted-scanners-30b84/nmap-scanner:latest
+
+# Deploy the new image
+gcloud run deploy nmap-scanner \
+  --image gcr.io/hosted-scanners-30b84/nmap-scanner:latest \
+  --region us-central1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --update-env-vars="VERCEL_WEBHOOK_URL=https://ha-scanners.vercel.app/api/scans/webhook,GCP_WEBHOOK_SECRET=26b3018a3329ac8b92b35f5d9c29c1f83b211219cd8ba79e47a494db,GCP_BUCKET_NAME=hosted-scanners-reports,GCP_PROJECT=hosted-scanners" \
+  --timeout=600 \
+  --memory=1Gi \
+  --cpu=1
+```
+
+### Authentication Setup
+
+Authenticate with the service account that has Cloud Run permissions:
+```bash
+gcloud auth activate-service-account --key-file=gcp/keys/hosted-scanners-appspot-key.json
+gcloud config set project hosted-scanners
+```
+
+---
+
+## Troubleshooting
+
+### Scans Stuck in "in_progress" State
+
+**Symptoms**: Scans never complete, remain in `in_progress` forever
+
+**Root Cause**: Webhook not being sent or rejected by backend
+
+**Solutions**:
+1. **Check Cloud Run environment variables**:
+   ```bash
+   gcloud run services describe nmap-scanner --region=us-central1 --format="value(spec.template.spec.containers[0].env)"
+   ```
+   Verify `VERCEL_WEBHOOK_URL` and `GCP_WEBHOOK_SECRET` are set correctly.
+
+2. **Test webhook endpoint manually**:
+   ```bash
+   curl -X POST https://ha-scanners.vercel.app/api/scans/webhook \
+     -H "Content-Type: application/json" \
+     -H "x-gcp-webhook-secret: 26b3018a3329ac8b92b35f5d9c29c1f83b211219cd8ba79e47a494db" \
+     -d '{"scanId":"test-123","userId":"test","status":"completed","gcpStorageUrl":"gs://test/test.json","scannerType":"nmap"}'
+   ```
+   Expected: `HTTP 200` response
+
+3. **Check Cloud Run logs** for webhook errors:
+   ```bash
+   gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=nmap-scanner" --limit=50
+   ```
+
+4. **Verify callbackUrl is being sent**: Check `src/app/api/scans/route.ts` ensures `callbackUrl: process.env.VERCEL_WEBHOOK_URL` is in the scan job payload.
+
+### Cloud Run Cold Starts
+
+- First scan after idle period takes 10-30 seconds to start
+- Frontend timeout is configured to 30s in `src/lib/gcp/scannerClient.ts`
+- This is expected behavior - consider adding min instances if UX is impacted
+
+### Permission Errors During Deployment
+
+- Ensure you're authenticated: `gcloud auth list`
+- Use service account: `gcloud auth activate-service-account --key-file=gcp/keys/hosted-scanners-appspot-key.json`
+- Required permissions: `run.services.update`, `run.services.create`, `artifactregistry.repositories.get`
+
+### General Debugging
+
+- If the frontend logs `Scanner URL for type 'nmap' is not configured in environment variables.` ensure `GCP_NMAP_SCANNER_URL` is set in Vercel.
+- For scan execution failures, check Cloud Run logs and verify the target is reachable.
+- Test scanner directly: `curl -X POST https://nmap-scanner-g3256mphxa-uc.a.run.app -H "Content-Type: application/json" -d '{"target":"scanme.nmap.org","userId":"test","scanId":"test-'$(date +%s)'"}'`
+
+---
+
+## Frontend Action Items
+
 - Ensure `enqueueScanJob` posts `{ scanId, userId, type: 'nmap', target, options, callbackUrl }` to the configured scanner URL.
 - Rely on the completion webhook at `/api/scans/webhook` for final results and to update Firestore scan documents.
+- Frontend timeout for scanner dispatch is 30 seconds to accommodate Cloud Run cold starts.

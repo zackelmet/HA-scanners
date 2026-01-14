@@ -101,6 +101,26 @@ export default function ScansPage() {
     return new Date(ts).toLocaleString();
   };
 
+  const formatDuration = (startTime: any, endTime: any) => {
+    if (!startTime || !endTime) return "-";
+    let start = startTime;
+    let end = endTime;
+    if (typeof startTime.toDate === "function") start = startTime.toDate();
+    else start = new Date(startTime);
+    if (typeof endTime.toDate === "function") end = endTime.toDate();
+    else end = new Date(endTime);
+
+    const diffMs = end.getTime() - start.getTime();
+    if (diffMs < 0) return "-";
+
+    const seconds = Math.floor(diffMs / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ${minutes % 60}m`;
+  };
+
   const persistCustomTarget = async (address: string) => {
     if (!currentUser) return;
     const userRef = doc(db, "users", currentUser.uid);
@@ -529,6 +549,12 @@ export default function ScansPage() {
                         Started
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                        Duration
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                        Result Files
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
                         Actions
                       </th>
                     </tr>
@@ -563,30 +589,50 @@ export default function ScansPage() {
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {formatDate(scan.startTime || scan.createdAt)}
                         </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 font-mono">
+                          {formatDuration(scan.startTime, scan.endTime)}
+                        </td>
                         <td className="px-6 py-4">
-                          {scan.gcpSignedUrl || scan.gcpReportSignedUrl ? (
+                          {scan.gcpSignedUrl || scan.gcpXmlSignedUrl ? (
                             <div className="flex gap-2">
-                              {scan.gcpReportSignedUrl && (
-                                <a
-                                  href={scan.gcpReportSignedUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-[#00FED9] hover:text-[#00D4B8] text-sm font-semibold"
-                                >
-                                  PDF
-                                </a>
-                              )}
                               {scan.gcpSignedUrl && (
                                 <a
                                   href={scan.gcpSignedUrl}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="text-[#00FED9] hover:text-[#00D4B8] text-sm font-semibold"
+                                  title="Download JSON results"
                                 >
                                   JSON
                                 </a>
                               )}
+                              {scan.gcpXmlSignedUrl && (
+                                <a
+                                  href={scan.gcpXmlSignedUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[#00FED9] hover:text-[#00D4B8] text-sm font-semibold"
+                                  title="Download XML results"
+                                >
+                                  XML
+                                </a>
+                              )}
                             </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {scan.gcpReportSignedUrl ? (
+                            <a
+                              href={scan.gcpReportSignedUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[#00FED9] hover:text-[#00D4B8] text-sm font-semibold"
+                              title="Download PDF report"
+                            >
+                              PDF
+                            </a>
                           ) : (
                             <span className="text-gray-400 text-sm">—</span>
                           )}
