@@ -180,16 +180,44 @@ export async function POST(request: NextRequest) {
     // Get plan limits
     const planLimits = getPlanLimits(userData.currentPlan);
 
+    // Initialize missing fields if needed
+    const needsInit =
+      !userData.scannerLimits || !userData.scannersUsedThisMonth;
+    if (needsInit) {
+      const initData: any = {
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      if (!userData.scannerLimits) {
+        initData.scannerLimits = planLimits.scanners;
+        userData.scannerLimits = planLimits.scanners;
+      }
+      if (!userData.scannersUsedThisMonth) {
+        initData.scannersUsedThisMonth = { nmap: 0, openvas: 0, zap: 0 };
+        userData.scannersUsedThisMonth = { nmap: 0, openvas: 0, zap: 0 };
+      }
+      await userDocRef.update(initData);
+    }
+
     // Check if monthly reset is needed
     if (needsMonthlyReset(userData.lastMonthlyReset)) {
-      await userDocRef.update({
+      const resetData: any = {
         scansThisMonth: 0,
         scannersUsedThisMonth: { nmap: 0, openvas: 0, zap: 0 },
         lastMonthlyReset: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      };
+
+      // Initialize scannerLimits if missing
+      if (!userData.scannerLimits) {
+        resetData.scannerLimits = planLimits.scanners;
+      }
+
+      await userDocRef.update(resetData);
       userData.scansThisMonth = 0;
       userData.scannersUsedThisMonth = { nmap: 0, openvas: 0, zap: 0 };
+      if (!userData.scannerLimits) {
+        userData.scannerLimits = planLimits.scanners;
+      }
     }
 
     // Enforce per-scanner monthly limits
@@ -272,14 +300,26 @@ export async function POST(request: NextRequest) {
         }
 
         // Increment per-scanner usage counters on user doc (by scansNeeded count)
-        tx.update(userDocRef, {
-          [`scannersUsedThisMonth.${scanner}`]:
-            admin.firestore.FieldValue.increment(scansNeeded),
+        const updateData: any = {
           scansThisMonth: admin.firestore.FieldValue.increment(scansNeeded),
           totalScansAllTime: admin.firestore.FieldValue.increment(scansNeeded),
           lastScanDate: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        };
+
+        // Initialize scannersUsedThisMonth if it doesn't exist
+        if (!freshUser.scannersUsedThisMonth) {
+          updateData.scannersUsedThisMonth = {
+            nmap: scanner === "nmap" ? scansNeeded : 0,
+            openvas: scanner === "openvas" ? scansNeeded : 0,
+            zap: scanner === "zap" ? scansNeeded : 0,
+          };
+        } else {
+          updateData[`scannersUsedThisMonth.${scanner}`] =
+            admin.firestore.FieldValue.increment(scansNeeded);
+        }
+
+        tx.update(userDocRef, updateData);
       });
     } catch (err: any) {
       if (err && err.message === "QuotaExceeded") {
@@ -421,10 +461,15 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 },
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating scan:", error);
+    console.error("Error stack:", error?.stack);
+    console.error("Error message:", error?.message);
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        error: "Internal server error",
+        details: error?.message || "Unknown error",
+      },
       { status: 500 },
     );
   }
