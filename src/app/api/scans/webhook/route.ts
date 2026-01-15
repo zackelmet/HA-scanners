@@ -81,6 +81,10 @@ export async function POST(request: NextRequest) {
       // optional signed URL and expiry sent by worker
       gcpSignedUrl,
       gcpSignedUrlExpires,
+      // XML results
+      gcpXmlStorageUrl,
+      gcpXmlSignedUrl,
+      gcpXmlSignedUrlExpires,
       // optional PDF report links
       gcpReportStorageUrl,
       gcpReportSignedUrl,
@@ -135,6 +139,21 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Handle XML results
+      const normalizedXmlUrl = gcpXmlStorageUrl || null;
+      let normalizedXmlSignedUrl = gcpXmlSignedUrl || null;
+      let normalizedXmlSignedUrlExpires = gcpXmlSignedUrlExpires || null;
+
+      if (normalizedXmlUrl && !normalizedXmlSignedUrl) {
+        console.log("🔗 Generating signed URL for XML:", normalizedXmlUrl);
+        normalizedXmlSignedUrl = await generateSignedUrl(normalizedXmlUrl);
+        if (normalizedXmlSignedUrl) {
+          normalizedXmlSignedUrlExpires = new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000,
+          ).toISOString();
+        }
+      }
+
       const normalizedReportUrl = gcpReportStorageUrl || null;
       let normalizedReportSignedUrl = gcpReportSignedUrl || null;
       let normalizedReportSignedUrlExpires = gcpReportSignedUrlExpires || null;
@@ -163,6 +182,11 @@ export async function POST(request: NextRequest) {
           // store worker-provided signed urls and their expiry if present
           gcpSignedUrl: normalizedSignedUrl,
           gcpSignedUrlExpires: normalizedSignedUrlExpires,
+          // XML results
+          gcpXmlStorageUrl: normalizedXmlUrl,
+          gcpXmlSignedUrl: normalizedXmlSignedUrl,
+          gcpXmlSignedUrlExpires: normalizedXmlSignedUrlExpires,
+          // PDF reports
           gcpReportStorageUrl: normalizedReportUrl,
           gcpReportSignedUrl: normalizedReportSignedUrl,
           gcpReportSignedUrlExpires: normalizedReportSignedUrlExpires,
@@ -187,6 +211,11 @@ export async function POST(request: NextRequest) {
           // store signed urls on global doc too for convenience (may expire)
           gcpSignedUrl: normalizedSignedUrl,
           gcpSignedUrlExpires: normalizedSignedUrlExpires,
+          // XML results
+          gcpXmlStorageUrl: normalizedXmlUrl,
+          gcpXmlSignedUrl: normalizedXmlSignedUrl,
+          gcpXmlSignedUrlExpires: normalizedXmlSignedUrlExpires,
+          // PDF reports
           gcpReportStorageUrl: normalizedReportUrl,
           gcpReportSignedUrl: normalizedReportSignedUrl,
           gcpReportSignedUrlExpires: normalizedReportSignedUrlExpires,
