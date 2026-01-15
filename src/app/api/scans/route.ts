@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
         initData.scannersUsedThisMonth = { nmap: 0, openvas: 0, zap: 0 };
         userData.scannersUsedThisMonth = { nmap: 0, openvas: 0, zap: 0 };
       }
-      await userDocRef.update(initData);
+      await userDocRef.set(initData, { merge: true });
     }
 
     // Check if monthly reset is needed
@@ -286,16 +286,22 @@ export async function POST(request: NextRequest) {
         // Create one scan doc per target
         for (const normalizedTarget of normalizedTargets) {
           const newScanRef = scansCollectionRef.doc();
-          tx.set(newScanRef, {
+          const scanData: any = {
             userId,
             type,
             target: normalizedTarget,
-            batchId,
             options: normalizedOptions,
             status: "queued",
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
+          };
+
+          // Only include batchId if it exists (multiple targets)
+          if (batchId) {
+            scanData.batchId = batchId;
+          }
+
+          tx.set(newScanRef, scanData);
           scanRefs.push(newScanRef);
         }
 
@@ -355,17 +361,23 @@ export async function POST(request: NextRequest) {
           .collection("completedScans")
           .doc(scanRef.id);
 
-        batch.set(userScanRef, {
+        const userScanData: any = {
           scanId: scanRef.id,
           status: "queued",
           type,
           target: normalizedTarget,
-          batchId,
           startTime: admin.firestore.FieldValue.serverTimestamp(),
           resultsSummary: null,
           gcpStorageUrl: null,
           errorMessage: null,
-        });
+        };
+
+        // Only include batchId if it exists
+        if (batchId) {
+          userScanData.batchId = batchId;
+        }
+
+        batch.set(userScanRef, userScanData);
       }
       await batch.commit();
     } catch (err) {
