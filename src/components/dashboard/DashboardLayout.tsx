@@ -203,6 +203,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+        {/* Mobile header with hamburger */}
+        <header className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 text-gray-600 hover:text-gray-900"
+          >
+            <FontAwesomeIcon icon={faBars} className="w-6 h-6" />
+          </button>
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/HA-logo.png"
+              alt="Hacker Analytics"
+              width={24}
+              height={24}
+              className="w-6 h-6"
+            />
+            <span className="font-bold text-[#0A1128]">Hacker Analytics</span>
+          </Link>
+          <div className="w-10" /> {/* Spacer for centering */}
+        </header>
+
         {/* Page content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto">{children}</main>
       </div>

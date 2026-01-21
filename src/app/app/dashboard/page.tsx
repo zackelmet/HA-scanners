@@ -79,14 +79,6 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <div className="p-6 lg:p-8 space-y-6 max-w-full">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-[#0A1128]">Dashboard</h1>
-          <p className="text-gray-600 mt-1">
-            Welcome back! Here&apos;s your security overview.
-          </p>
-        </div>
-
         {/* No subscription banner */}
         {!hasActiveSubscription && (
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
@@ -96,11 +88,11 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1">
                 <h3 className="font-bold text-xl text-[#0A1128]">
-                  Upgrade to Start Scanning
+                  Buy Credits to Start Scanning
                 </h3>
                 <p className="text-gray-600 mt-1">
-                  Subscribe to unlock hosted Nmap, OpenVAS, and OWASP ZAP
-                  scanning. Starting at $29/month.
+                  Purchase scan credits to unlock hosted Nmap, OpenVAS, and OWASP ZAP
+                  scanning. Starting at $10 for 10 scans.
                 </p>
                 <Link
                   href="/#pricing"
@@ -146,20 +138,20 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-[#0A1128]">
-                    {stats.nmap.remaining}
+                    {stats.nmap.limit}
                   </span>
-                  <span className="text-gray-500 text-sm">remaining</span>
+                  <span className="text-gray-500 text-sm">credits available</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-[#00FED9] h-2 rounded-full transition-all"
                     style={{
-                      width: `${((stats.nmap.limit - stats.nmap.remaining) / stats.nmap.limit) * 100}%`,
+                      width: `${(stats.nmap.limit / Math.max(stats.nmap.limit, 1)) * 100}%`,
                     }}
                   />
                 </div>
                 <p className="text-sm text-gray-600">
-                  {stats.nmap.used} of {stats.nmap.limit} used this month
+                  {stats.nmap.used} scans completed
                 </p>
               </div>
             </div>
@@ -175,20 +167,20 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-[#0A1128]">
-                    {stats.openvas.remaining}
+                    {stats.openvas.limit}
                   </span>
-                  <span className="text-gray-500 text-sm">remaining</span>
+                  <span className="text-gray-500 text-sm">credits available</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-[#00FED9] h-2 rounded-full transition-all"
                     style={{
-                      width: `${((stats.openvas.limit - stats.openvas.remaining) / stats.openvas.limit) * 100}%`,
+                      width: `${(stats.openvas.limit / Math.max(stats.openvas.limit, 1)) * 100}%`,
                     }}
                   />
                 </div>
                 <p className="text-sm text-gray-600">
-                  {stats.openvas.used} of {stats.openvas.limit} used this month
+                  {stats.openvas.used} scans completed
                 </p>
               </div>
             </div>
@@ -206,20 +198,20 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-[#0A1128]">
-                    {stats.zap.remaining}
+                    {stats.zap.limit}
                   </span>
-                  <span className="text-gray-500 text-sm">remaining</span>
+                  <span className="text-gray-500 text-sm">credits available</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-[#00FED9] h-2 rounded-full transition-all"
                     style={{
-                      width: `${((stats.zap.limit - stats.zap.remaining) / stats.zap.limit) * 100}%`,
+                      width: `${(stats.zap.limit / Math.max(stats.zap.limit, 1)) * 100}%`,
                     }}
                   />
                 </div>
                 <p className="text-sm text-gray-600">
-                  {stats.zap.used} of {stats.zap.limit} used this month
+                  {stats.zap.used} scans completed
                 </p>
               </div>
             </div>

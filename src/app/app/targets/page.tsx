@@ -275,25 +275,7 @@ export default function TargetsPage() {
                 </span>
               </label>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="flex flex-col">
-                <span className="text-sm font-semibold text-gray-700">
-                  Target type
-                </span>
-                <select
-                  value={formState.type}
-                  onChange={(event) =>
-                    handleInputChange("type", event.target.value)
-                  }
-                  className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
-                >
-                  {TARGET_TYPES.map((typeOption) => (
-                    <option key={typeOption} value={typeOption}>
-                      {typeOption.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <div>
               <label className="flex flex-col">
                 <span className="text-sm font-semibold text-gray-700">
                   Tags (comma separated)
@@ -466,28 +448,7 @@ export default function TargetsPage() {
                   />
                 </label>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="flex flex-col">
-                  <span className="text-sm font-semibold text-gray-700">
-                    Target type
-                  </span>
-                  <select
-                    value={editForm.type}
-                    onChange={(event) =>
-                      setEditForm((prev) => ({
-                        ...prev,
-                        type: event.target.value as SavedTarget["type"],
-                      }))
-                    }
-                    className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
-                  >
-                    {TARGET_TYPES.map((typeOption) => (
-                      <option key={typeOption} value={typeOption}>
-                        {typeOption.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <div>
                 <label className="flex flex-col">
                   <span className="text-sm font-semibold text-gray-700">
                     Tags (comma separated)
@@ -532,7 +493,7 @@ export default function TargetsPage() {
             💡 About saved targets
           </h3>
           <p className="text-gray-600 text-sm">
-            Saved targets are persisted directly on your Firestore user record
+            Saved targets are persisted directly on your user record
             so you can reference them across scans and devices.
           </p>
         </div>

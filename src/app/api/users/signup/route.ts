@@ -50,8 +50,8 @@ export async function POST(req: NextRequest) {
         subscriptionStatus: "none",
         currentPlan: "free",
         monthlyScansLimit: aggregatedMonthlyLimit,
-        // Initialize per-scanner limits and counters
-        scannerLimits: freePlan.scanners,
+        // Initialize per-scanner limits and counters - give 1 free credit to start
+        scannerLimits: { nmap: 1, openvas: 1, zap: 1 },
         scannersUsedThisMonth: { nmap: 0, openvas: 0, zap: 0 },
         scansThisMonth: 0,
         totalScansAllTime: 0,
