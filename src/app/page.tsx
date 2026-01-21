@@ -9,7 +9,7 @@ export default function Home() {
     {
       name: "Starter Pack",
       price: "$10",
-      priceId: "price_1Ss46B053rHBeqKvnOfARRYi", // 10 credits
+      priceId: "price_1Ss4qGP20FExfpAmHyXcosk6", // 10 credits (LIVE)
       label: "Perfect for testing",
       features: [
         "10 scan credits",
@@ -23,7 +23,7 @@ export default function Home() {
     {
       name: "Pro Pack",
       price: "$50",
-      priceId: "price_1Ss46K053rHBeqKvOgcEgB3t", // 75 credits
+      priceId: "price_1Ss4qQP20FExfpAmhw9q3WEN", // 75 credits (LIVE)
       label: "Best for teams",
       features: [
         "75 scan credits",
@@ -38,7 +38,7 @@ export default function Home() {
     {
       name: "Enterprise Pack",
       price: "$500",
-      priceId: "price_1Ss46X053rHBeqKvYG2OdLRE", // 1000 credits
+      priceId: "price_1Ss4qdP20FExfpAmaGwAbE09", // 1000 credits (LIVE)
       label: "For large organizations",
       features: [
         "1,000 scan credits",
@@ -69,8 +69,8 @@ export default function Home() {
             Buy Scan Credits
           </h1>
           <p className="text-lg lg:text-xl neon-subtle max-w-2xl mx-auto">
-            One credit = one complete security scan with all 3 tools.
-            No monthly fees, credits never expire.
+            One credit = one complete security scan with all 3 tools. No monthly
+            fees, credits never expire.
           </p>
         </div>
 
