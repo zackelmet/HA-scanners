@@ -48,6 +48,23 @@ export async function POST(req: NextRequest) {
     // Get or create Stripe customer
     let customerId = userData?.stripeCustomerId;
 
+    // Verify customer exists in Stripe (might be from test mode)
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId);
+        console.log("✅ Using existing Stripe customer:", customerId);
+      } catch (error: any) {
+        if (error.code === "resource_missing") {
+          console.log(
+            "⚠️ Customer ID from test mode, creating new customer...",
+          );
+          customerId = undefined; // Reset to create new customer
+        } else {
+          throw error;
+        }
+      }
+    }
+
     if (!customerId) {
       console.log("Creating new Stripe customer...");
       const customer = await stripe.customers.create({
@@ -63,8 +80,6 @@ export async function POST(req: NextRequest) {
       await admin.firestore().collection("users").doc(userId).update({
         stripeCustomerId: customerId,
       });
-    } else {
-      console.log("✅ Using existing Stripe customer:", customerId);
     }
 
     // Create checkout session

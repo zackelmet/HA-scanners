@@ -83,7 +83,7 @@ export default function DashboardPage() {
         {!hasActiveSubscription && (
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-start gap-4">
-              <div className="p-3 rounded-xl bg-cyan-50 border border-cyan-200 text-[#00FED9]">
+              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[#0A1128]">
                 <FontAwesomeIcon icon={faRocket} className="text-2xl" />
               </div>
               <div className="flex-1">
@@ -91,8 +91,8 @@ export default function DashboardPage() {
                   Buy Credits to Start Scanning
                 </h3>
                 <p className="text-gray-600 mt-1">
-                  Purchase scan credits to unlock hosted Nmap, OpenVAS, and OWASP ZAP
-                  scanning. Starting at $10 for 10 scans.
+                  Purchase scan credits to unlock hosted Nmap, OpenVAS, and
+                  OWASP ZAP scanning. Starting at $10 for 10 scans.
                 </p>
                 <Link
                   href="/#pricing"
@@ -130,89 +130,105 @@ export default function DashboardPage() {
             {/* Nmap Stats */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0A1128]">Nmap Scans</h3>
-                <div className="text-[#00FED9]">
+                <div>
+                  <h3 className="font-semibold text-[#0A1128]">
+                    Nmap - Network Scanner
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Port scanning and service detection
+                  </p>
+                </div>
+                <div className="text-[#0A1128]">
                   <FontAwesomeIcon icon={faSatelliteDish} />
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-[#0A1128]">
-                    {stats.nmap.limit}
+                    {stats.nmap.remaining}
                   </span>
-                  <span className="text-gray-500 text-sm">credits available</span>
+                  <span className="text-gray-500 text-sm">
+                    / {stats.nmap.limit} scans remaining
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-[#00FED9] h-2 rounded-full transition-all"
+                    className="bg-[#0A1128] h-2 rounded-full transition-all"
                     style={{
-                      width: `${(stats.nmap.limit / Math.max(stats.nmap.limit, 1)) * 100}%`,
+                      width: `${(stats.nmap.remaining / Math.max(stats.nmap.limit, 1)) * 100}%`,
                     }}
                   />
                 </div>
-                <p className="text-sm text-gray-600">
-                  {stats.nmap.used} scans completed
-                </p>
               </div>
             </div>
 
             {/* OpenVAS Stats */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0A1128]">OpenVAS Scans</h3>
-                <div className="text-[#00FED9]">
+                <div>
+                  <h3 className="font-semibold text-[#0A1128]">
+                    OpenVAS - Vulnerability Assessment
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    CVE detection and security analysis
+                  </p>
+                </div>
+                <div className="text-[#0A1128]">
                   <FontAwesomeIcon icon={faShieldHalved} />
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-[#0A1128]">
-                    {stats.openvas.limit}
+                    {stats.openvas.remaining}
                   </span>
-                  <span className="text-gray-500 text-sm">credits available</span>
+                  <span className="text-gray-500 text-sm">
+                    / {stats.openvas.limit} scans remaining
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-[#00FED9] h-2 rounded-full transition-all"
+                    className="bg-[#0A1128] h-2 rounded-full transition-all"
                     style={{
-                      width: `${(stats.openvas.limit / Math.max(stats.openvas.limit, 1)) * 100}%`,
+                      width: `${(stats.openvas.remaining / Math.max(stats.openvas.limit, 1)) * 100}%`,
                     }}
                   />
                 </div>
-                <p className="text-sm text-gray-600">
-                  {stats.openvas.used} scans completed
-                </p>
               </div>
             </div>
 
             {/* ZAP Stats */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-[#0A1128]">
-                  OWASP ZAP Scans
-                </h3>
-                <div className="text-[#00FED9]">
+                <div>
+                  <h3 className="font-semibold text-[#0A1128]">
+                    OWASP ZAP - Web Application Scanner
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Web vulnerabilities and OWASP Top 10
+                  </p>
+                </div>
+                <div className="text-[#0A1128]">
                   <FontAwesomeIcon icon={faChartLine} />
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-[#0A1128]">
-                    {stats.zap.limit}
+                    {stats.zap.remaining}
                   </span>
-                  <span className="text-gray-500 text-sm">credits available</span>
+                  <span className="text-gray-500 text-sm">
+                    / {stats.zap.limit} scans remaining
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-[#00FED9] h-2 rounded-full transition-all"
+                    className="bg-[#0A1128] h-2 rounded-full transition-all"
                     style={{
-                      width: `${(stats.zap.limit / Math.max(stats.zap.limit, 1)) * 100}%`,
+                      width: `${(stats.zap.remaining / Math.max(stats.zap.limit, 1)) * 100}%`,
                     }}
                   />
                 </div>
-                <p className="text-sm text-gray-600">
-                  {stats.zap.used} scans completed
-                </p>
               </div>
             </div>
           </div>
@@ -226,7 +242,7 @@ export default function DashboardPage() {
               className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-cyan-50 border border-cyan-200 text-[#00FED9]">
+                <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[#0A1128]">
                   <FontAwesomeIcon
                     icon={faSatelliteDish}
                     className="text-2xl"
@@ -248,7 +264,7 @@ export default function DashboardPage() {
               className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-cyan-50 border border-cyan-200 text-[#00FED9]">
+                <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[#0A1128]">
                   <FontAwesomeIcon icon={faBullseye} className="text-2xl" />
                 </div>
                 <div>
@@ -271,7 +287,7 @@ export default function DashboardPage() {
               <h2 className="text-xl font-bold text-[#0A1128]">Recent Scans</h2>
               <Link
                 href="/app/scans"
-                className="text-[#00FED9] hover:text-[#00D4B8] text-sm font-semibold"
+                className="text-[#0A1128] hover:opacity-70 text-sm font-semibold"
               >
                 View All →
               </Link>

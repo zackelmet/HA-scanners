@@ -9,7 +9,7 @@ export default function Home() {
     {
       name: "Starter Pack",
       price: "$10",
-      priceId: "price_1Ss4qGP20FExfpAmHyXcosk6", // 10 credits (LIVE)
+      priceId: "price_1Ss5HlP4RsXsKxGc6Oq727mP", // 10 credits (LIVE)
       label: "Perfect for testing",
       features: [
         "10 scan credits",
@@ -23,7 +23,7 @@ export default function Home() {
     {
       name: "Pro Pack",
       price: "$50",
-      priceId: "price_1Ss4qQP20FExfpAmhw9q3WEN", // 75 credits (LIVE)
+      priceId: "price_1Ss5HqP4RsXsKxGcVC4GK8jQ", // 75 credits (LIVE)
       label: "Best for teams",
       features: [
         "75 scan credits",
@@ -38,7 +38,7 @@ export default function Home() {
     {
       name: "Enterprise Pack",
       price: "$500",
-      priceId: "price_1Ss4qdP20FExfpAmaGwAbE09", // 1000 credits (LIVE)
+      priceId: "price_1Ss5HwP4RsXsKxGc0Hs42FUk", // 1000 credits (LIVE)
       label: "For large organizations",
       features: [
         "1,000 scan credits",
