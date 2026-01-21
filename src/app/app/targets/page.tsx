@@ -218,7 +218,7 @@ export default function TargetsPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="p-6 lg:p-8">
+        <div className="p-6 lg:p-8 max-w-full">
           <p className="text-gray-500">Loading your saved targets…</p>
         </div>
       </DashboardLayout>
@@ -227,7 +227,7 @@ export default function TargetsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 lg:p-8 space-y-6">
+      <div className="p-6 lg:p-8 space-y-6 max-w-full">
         <div className="flex flex-col gap-3">
           <div>
             <h1 className="text-3xl font-bold text-[#0A1128]">Targets</h1>

@@ -7,46 +7,46 @@ export default function Home() {
   // Hardcode price IDs - they're public and safe to expose
   const pricingPlans = [
     {
-      name: "Essential",
-      price: "$29",
-      priceId: "price_1Sp9hn053rHBeqKvzWTRWqP2", // Essential plan
-      label: "Perfect for small teams",
+      name: "Starter Pack",
+      price: "$10",
+      priceId: "price_1Ss46B053rHBeqKvnOfARRYi", // 10 credits
+      label: "Perfect for testing",
       features: [
-        "5 targets/month",
-        "Nmap, OpenVAS & OWASP ZAP scanners",
+        "10 scan credits",
+        "Each credit = 1 complete scan",
+        "Nmap, OpenVAS & OWASP ZAP included",
         "Zero setup - instant deployment",
-        "Always up-to-date threat feeds",
         "30-day data retention",
         "Email support",
       ],
     },
     {
-      name: "Pro",
-      price: "$99",
-      priceId: "price_1Sp9iB053rHBeqKvcIa3uZlm", // Pro plan
-      label: "Best for growing teams",
+      name: "Pro Pack",
+      price: "$50",
+      priceId: "price_1Ss46K053rHBeqKvOgcEgB3t", // 75 credits
+      label: "Best for teams",
       features: [
-        "25 targets/month",
-        "Full scanner suite access",
-        "API access for automation",
+        "75 scan credits",
+        "Each credit = 1 complete scan",
+        "All 3 scanners per credit",
         "CSV/JSON export capabilities",
         "Priority email support",
-        "30-day data retention",
+        "60-day data retention",
       ],
       popular: true,
     },
     {
-      name: "Scale",
-      price: "$249",
-      priceId: "price_1Sp9iU053rHBeqKvYpsGnT42", // Scale plan
+      name: "Enterprise Pack",
+      price: "$500",
+      priceId: "price_1Ss46X053rHBeqKvYG2OdLRE", // 1000 credits
       label: "For large organizations",
       features: [
-        "100 targets/month",
-        "Full scanner suite + custom integrations",
+        "1,000 scan credits",
+        "Each credit = 1 complete scan",
+        "Full scanner suite access",
         "Unlimited data retention",
         "Executive summary reports",
         "24/7 priority support",
-        "SLA guarantee",
       ],
     },
   ];
@@ -62,15 +62,15 @@ export default function Home() {
           <div className="flex items-center justify-center gap-3">
             <span className="neon-chip">Pricing</span>
             <span className="neon-badge-muted">
-              No hidden fees • Cancel anytime
+              No subscriptions • Pay as you go
             </span>
           </div>
           <h1 className="text-4xl lg:text-5xl font-black tracking-tight neon-hero-title">
-            Choose Your Plan
+            Buy Scan Credits
           </h1>
           <p className="text-lg lg:text-xl neon-subtle max-w-2xl mx-auto">
-            Protect your external infrastructure without managing scanners.
-            Scale from solo to enterprise.
+            One credit = one complete security scan with all 3 tools.
+            No monthly fees, credits never expire.
           </p>
         </div>
 

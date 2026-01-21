@@ -92,7 +92,7 @@ export default function PricingCard({
           <div className="text-4xl font-black text-[var(--primary)]">
             {price}
           </div>
-          <div className="text-sm text-[var(--text-muted)]">per month</div>
+          <div className="text-sm text-[var(--text-muted)]">one-time</div>
         </div>
       </div>
 

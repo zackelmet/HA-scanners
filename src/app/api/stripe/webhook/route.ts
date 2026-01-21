@@ -111,7 +111,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   console.log("=== CHECKOUT COMPLETED HANDLER ===");
   console.log("Session ID:", session.id);
   console.log("Customer:", session.customer);
-  console.log("Subscription:", session.subscription);
+  console.log("Mode:", session.mode);
   console.log("Session metadata:", JSON.stringify(session.metadata));
 
   const userId = session.metadata?.firebase_uid;
@@ -125,14 +125,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   console.log("✅ Found Firebase UID in metadata:", userId);
 
   const customerId = session.customer as string;
-  const subscriptionId = session.subscription as string;
-
-  console.log(`🔍 Looking up user ${userId} in Firestore...`);
-
   const admin = initializeAdmin();
   const db = admin.firestore();
 
-  // Update user with customer ID if not already set
+  console.log(`🔍 Looking up user ${userId} in Firestore...`);
+
   const userRef = db.collection("users").doc(userId);
   const userDoc = await userRef.get();
 
@@ -142,37 +139,98 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   console.log("✅ User found in Firestore");
-  console.log("🔄 Updating user with Stripe IDs...");
 
+  // Update user with customer ID if not already set
   await userRef.update({
     stripeCustomerId: customerId,
-    stripeSubscriptionId: subscriptionId,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  console.log(`✅ Updated user ${userId} with Stripe IDs`);
+  console.log(`✅ Updated user ${userId} with Stripe customer ID`);
 
-  // If subscription ID exists, fetch and process it
-  if (subscriptionId) {
-    console.log(`🔍 Fetching subscription details for ${subscriptionId}...`);
+  // Handle based on mode
+  if (session.mode === "payment") {
+    // One-time payment - add credits
+    console.log("💳 One-time payment detected - adding credits");
+    
     const stripe = await getStripeServerSide();
-    if (stripe) {
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      const priceId = subscription.items.data[0]?.price.id;
-      console.log(`📊 Subscription price ID: ${priceId}`);
-      console.log(`📊 Subscription status: ${subscription.status}`);
-
-      await updateUserSubscription(
-        userId,
-        subscription,
-        priceId,
-        subscription.status,
-      );
+    if (!stripe) {
+      console.error("❌ Stripe not initialized");
+      return;
     }
-  } else {
-    console.warn(
-      "⚠️ No subscription ID in checkout session - one-time payment?",
-    );
+
+    // Get line items to find the price
+    const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+    const priceId = lineItems.data[0]?.price?.id;
+    
+    if (!priceId) {
+      console.error("❌ No price ID found in line items");
+      return;
+    }
+
+    console.log(`📊 Price ID: ${priceId}`);
+
+    // Retrieve price to get metadata with credit amounts
+    const price = await stripe.prices.retrieve(priceId);
+    console.log("💰 Price metadata:", price.metadata);
+
+    const nmapCredits = parseInt(price.metadata.nmap || "0");
+    const openvasCredits = parseInt(price.metadata.openvas || "0");
+    const zapCredits = parseInt(price.metadata.zap || "0");
+
+    console.log(`📈 Adding credits - nmap: ${nmapCredits}, openvas: ${openvasCredits}, zap: ${zapCredits}`);
+
+    // Get current limits or initialize
+    const userData = userDoc.data() || {};
+    const currentLimits = userData.scannerLimits || { nmap: 0, openvas: 0, zap: 0 };
+
+    // Add credits to existing limits
+    const newLimits = {
+      nmap: currentLimits.nmap + nmapCredits,
+      openvas: currentLimits.openvas + openvasCredits,
+      zap: currentLimits.zap + zapCredits,
+    };
+
+    console.log(`📊 New limits: nmap: ${newLimits.nmap}, openvas: ${newLimits.openvas}, zap: ${newLimits.zap}`);
+
+    await userRef.update({
+      scannerLimits: newLimits,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Initialize scannersUsedThisMonth if missing
+    if (!userData.scannersUsedThisMonth) {
+      await userRef.update({
+        scannersUsedThisMonth: { nmap: 0, openvas: 0, zap: 0 },
+      });
+    }
+
+    console.log("✅ Credits added successfully!");
+  } else if (session.mode === "subscription") {
+    // Legacy subscription mode
+    const subscriptionId = session.subscription as string;
+    
+    if (subscriptionId) {
+      console.log(`🔍 Fetching subscription details for ${subscriptionId}...`);
+      const stripe = await getStripeServerSide();
+      if (stripe) {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const priceId = subscription.items.data[0]?.price.id;
+        console.log(`📊 Subscription price ID: ${priceId}`);
+        console.log(`📊 Subscription status: ${subscription.status}`);
+
+        await userRef.update({
+          stripeSubscriptionId: subscriptionId,
+        });
+
+        await updateUserSubscription(
+          userId,
+          subscription,
+          priceId,
+          subscription.status,
+        );
+      }
+    }
   }
 
   console.log("=== CHECKOUT COMPLETED - DONE ===");

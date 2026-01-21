@@ -4,7 +4,6 @@ import { CreateScanRequest } from "@/lib/types/scanner";
 import {
   UserDocument,
   getPlanLimits,
-  needsMonthlyReset,
   ScanMetadata,
 } from "@/lib/types/user";
 
@@ -198,29 +197,7 @@ export async function POST(request: NextRequest) {
       await userDocRef.set(initData, { merge: true });
     }
 
-    // Check if monthly reset is needed
-    if (needsMonthlyReset(userData.lastMonthlyReset)) {
-      const resetData: any = {
-        scansThisMonth: 0,
-        scannersUsedThisMonth: { nmap: 0, openvas: 0, zap: 0 },
-        lastMonthlyReset: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      };
-
-      // Initialize scannerLimits if missing
-      if (!userData.scannerLimits) {
-        resetData.scannerLimits = planLimits.scanners;
-      }
-
-      await userDocRef.update(resetData);
-      userData.scansThisMonth = 0;
-      userData.scannersUsedThisMonth = { nmap: 0, openvas: 0, zap: 0 };
-      if (!userData.scannerLimits) {
-        userData.scannerLimits = planLimits.scanners;
-      }
-    }
-
-    // Enforce per-scanner monthly limits
+    // Enforce per-scanner limits (no monthly reset)
     const scanner = type as "nmap" | "openvas" | "zap";
 
     // Determine user's scanner limits (fall back to plan defaults)

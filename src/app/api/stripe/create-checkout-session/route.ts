@@ -85,16 +85,11 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
-      mode: "subscription",
+      mode: "payment",
       success_url: `${origin}/app/dashboard?success=true`,
       cancel_url: `${origin}/?canceled=true`,
       metadata: {
         firebase_uid: userId, // 🔑 CRITICAL: Link payment to Firebase user
-      },
-      subscription_data: {
-        metadata: {
-          firebase_uid: userId, // Also add to subscription
-        },
       },
     });
 
