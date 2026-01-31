@@ -316,7 +316,7 @@ export default function ScansPage() {
           <button
             className={`px-4 py-2 rounded-lg border-2 flex items-center gap-2 font-semibold transition-all ${
               activeTab === "new"
-                ? "border-[#00FED9] bg-cyan-50 text-[#0A1128]"
+                ? "border-[#0A1128] bg-blue-50 text-[#0A1128]"
                 : "border-gray-200 text-gray-600 hover:border-gray-300"
             }`}
             onClick={() => setActiveTab("new")}
@@ -327,7 +327,7 @@ export default function ScansPage() {
           <button
             className={`px-4 py-2 rounded-lg border-2 flex items-center gap-2 font-semibold transition-all ${
               activeTab === "history"
-                ? "border-[#00FED9] bg-cyan-50 text-[#0A1128]"
+                ? "border-[#0A1128] bg-blue-50 text-[#0A1128]"
                 : "border-gray-200 text-gray-600 hover:border-gray-300"
             }`}
             onClick={() => setActiveTab("history")}
@@ -344,7 +344,7 @@ export default function ScansPage() {
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center shadow-sm">
                 <FontAwesomeIcon
                   icon={faRocket}
-                  className="text-5xl mb-4 text-[#00FED9]"
+                  className="text-5xl mb-4 text-[#0A1128]"
                 />
                 <h2 className="text-2xl font-bold text-[#0A1128] mb-3">
                   Premium Feature
@@ -384,12 +384,12 @@ export default function ScansPage() {
                     </label>
                     <div className="space-y-3">
                       {/* Nmap Checkbox */}
-                      <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-[#00FED9] cursor-pointer transition-colors">
+                      <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-[#0A1128] cursor-pointer transition-colors">
                         <input
                           type="checkbox"
                           checked={selectedScanners.includes("nmap")}
                           onChange={() => toggleScanner("nmap")}
-                          className="mt-1 h-4 w-4 text-[#00FED9] rounded focus:ring-[#00FED9]"
+                          className="mt-1 h-4 w-4 text-[#0A1128] rounded focus:ring-[#0A1128]"
                         />
                         <div className="flex-1">
                           <div className="font-semibold text-[#0A1128]">
@@ -398,7 +398,7 @@ export default function ScansPage() {
                           <div className="text-xs text-gray-600">
                             Port scanning and service detection
                           </div>
-                          <div className="text-xs text-[#00FED9] mt-1">
+                          <div className="text-xs text-[#0A1128] mt-1 font-semibold">
                             {scannerRemaining("nmap")} /{" "}
                             {userData?.scannerLimits?.nmap ?? 0} scans remaining
                           </div>
@@ -406,12 +406,12 @@ export default function ScansPage() {
                       </label>
 
                       {/* OpenVAS Checkbox */}
-                      <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-[#00FED9] cursor-pointer transition-colors">
+                      <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-[#0A1128] cursor-pointer transition-colors">
                         <input
                           type="checkbox"
                           checked={selectedScanners.includes("openvas")}
                           onChange={() => toggleScanner("openvas")}
-                          className="mt-1 h-4 w-4 text-[#00FED9] rounded focus:ring-[#00FED9]"
+                          className="mt-1 h-4 w-4 text-[#0A1128] rounded focus:ring-[#0A1128]"
                         />
                         <div className="flex-1">
                           <div className="font-semibold text-[#0A1128]">
@@ -420,7 +420,7 @@ export default function ScansPage() {
                           <div className="text-xs text-gray-600">
                             CVE detection and security analysis
                           </div>
-                          <div className="text-xs text-[#00FED9] mt-1">
+                          <div className="text-xs text-[#0A1128] mt-1 font-semibold">
                             {scannerRemaining("openvas")} /{" "}
                             {userData?.scannerLimits?.openvas ?? 0} scans
                             remaining
@@ -429,12 +429,12 @@ export default function ScansPage() {
                       </label>
 
                       {/* ZAP Checkbox */}
-                      <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-[#00FED9] cursor-pointer transition-colors">
+                      <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-[#0A1128] cursor-pointer transition-colors">
                         <input
                           type="checkbox"
                           checked={selectedScanners.includes("zap")}
                           onChange={() => toggleScanner("zap")}
-                          className="mt-1 h-4 w-4 text-[#00FED9] rounded focus:ring-[#00FED9]"
+                          className="mt-1 h-4 w-4 text-[#0A1128] rounded focus:ring-[#0A1128]"
                         />
                         <div className="flex-1">
                           <div className="font-semibold text-[#0A1128]">
@@ -443,7 +443,7 @@ export default function ScansPage() {
                           <div className="text-xs text-gray-600">
                             Web vulnerabilities and OWASP Top 10
                           </div>
-                          <div className="text-xs text-[#00FED9] mt-1">
+                          <div className="text-xs text-[#0A1128] mt-1 font-semibold">
                             {scannerRemaining("zap")} /{" "}
                             {userData?.scannerLimits?.zap ?? 0} scans remaining
                           </div>
@@ -459,7 +459,7 @@ export default function ScansPage() {
                     </label>
                     <div className="flex flex-wrap gap-3">
                       <select
-                        className="min-w-[200px] px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00FED9] focus:border-transparent"
+                        className="min-w-[200px] px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A1128] focus:border-transparent"
                         value={selectedTargetId}
                         onChange={(event) =>
                           handleSavedTargetChange(event.target.value)
@@ -481,7 +481,7 @@ export default function ScansPage() {
                       {selectedTarget && (
                         <button
                           type="button"
-                          className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:border-[#00FED9]"
+                          className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:border-[#0A1128]"
                           onClick={() =>
                             handleSavedTargetChange(CUSTOM_TARGET_ID)
                           }

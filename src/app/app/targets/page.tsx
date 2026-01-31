@@ -252,7 +252,7 @@ export default function TargetsPage() {
                     handleInputChange("name", event.target.value)
                   }
                   placeholder="Example: Internal API Gateway"
-                  className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
+                  className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0A1128]"
                 />
               </label>
               <label className="flex flex-col md:col-span-2">
@@ -267,7 +267,7 @@ export default function TargetsPage() {
                   required
                   placeholder="192.168.1.1&#10;example.com&#10;https://test.com"
                   rows={4}
-                  className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9] font-mono text-sm"
+                  className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0A1128] font-mono text-sm"
                 />
                 <span className="text-xs text-gray-500 mt-1">
                   Enter one address per line. Multiple addresses will create a
@@ -287,7 +287,7 @@ export default function TargetsPage() {
                     handleInputChange("tags", event.target.value)
                   }
                   placeholder="production, api"
-                  className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
+                  className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0A1128]"
                 />
               </label>
             </div>
@@ -337,12 +337,12 @@ export default function TargetsPage() {
                   className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <div className="p-2 rounded-lg bg-cyan-50 border border-cyan-200 text-[#00FED9]">
+                    <div className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-[#0A1128]">
                       <FontAwesomeIcon icon={faBullseye} />
                     </div>
                     <div className="flex gap-2">
                       <button
-                        className="p-2 text-gray-400 hover:text-[#00FED9] transition-colors"
+                        className="p-2 text-gray-400 hover:text-[#0A1128] transition-colors"
                         onClick={() => startEditing(target)}
                         aria-label={`Edit ${target.name}`}
                       >
@@ -366,7 +366,7 @@ export default function TargetsPage() {
                     </p>
                   ) : (
                     <div className="text-gray-600 text-sm mb-2">
-                      <p className="font-semibold text-[#00FED9] mb-1">
+                      <p className="font-semibold text-[#0A1128] mb-1">
                         {target.addresses.length} addresses
                       </p>
                       <div className="max-h-20 overflow-y-auto font-mono text-xs space-y-0.5">
@@ -378,7 +378,7 @@ export default function TargetsPage() {
                       </div>
                     </div>
                   )}
-                  <p className="text-xs uppercase tracking-[0.2em] text-[#00FED9] mb-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#0A1128] font-semibold mb-3">
                     {target.type}
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -427,7 +427,7 @@ export default function TargetsPage() {
                       }))
                     }
                     placeholder="Friendly name"
-                    className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
+                    className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0A1128]"
                   />
                 </label>
                 <label className="flex flex-col md:col-span-2">
@@ -444,7 +444,7 @@ export default function TargetsPage() {
                     }
                     required
                     rows={4}
-                    className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9] font-mono text-sm"
+                    className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0A1128] font-mono text-sm"
                   />
                 </label>
               </div>
@@ -463,7 +463,7 @@ export default function TargetsPage() {
                       }))
                     }
                     placeholder="production, api"
-                    className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00FED9]"
+                    className="mt-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0A1128]"
                   />
                 </label>
               </div>
@@ -479,7 +479,7 @@ export default function TargetsPage() {
                 <button
                   type="button"
                   onClick={cancelEditing}
-                  className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm hover:border-[#00FED9]"
+                  className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm hover:border-[#0A1128]"
                 >
                   Cancel
                 </button>
@@ -493,8 +493,8 @@ export default function TargetsPage() {
             💡 About saved targets
           </h3>
           <p className="text-gray-600 text-sm">
-            Saved targets are persisted directly on your user record
-            so you can reference them across scans and devices.
+            Saved targets are persisted directly on your user record so you can
+            reference them across scans and devices.
           </p>
         </div>
       </div>
