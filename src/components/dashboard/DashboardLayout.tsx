@@ -16,6 +16,7 @@ import {
   faSignOutAlt,
   faCog,
   faChevronUp,
+  faRobot,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/lib/context/AuthContext";
 import signout from "@/lib/firebase/signout";
@@ -62,6 +63,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { href: "/app/dashboard", label: "Dashboard", icon: faHome },
     { href: "/app/targets", label: "Targets", icon: faBullseye },
     { href: "/app/scans", label: "Scans", icon: faSatelliteDish },
+    { href: "/app/pentests", label: "Pentests", icon: faRobot },
   ];
 
   const bottomItems = [
@@ -225,7 +227,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto">
+          {children}
+        </main>
       </div>
     </div>
   );
