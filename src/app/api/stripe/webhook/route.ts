@@ -152,7 +152,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   if (session.mode === "payment") {
     // One-time payment - add credits
     console.log("💳 One-time payment detected - adding credits");
-    
+
     const stripe = await getStripeServerSide();
     if (!stripe) {
       console.error("❌ Stripe not initialized");
@@ -162,7 +162,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     // Get line items to find the price
     const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
     const priceId = lineItems.data[0]?.price?.id;
-    
+
     if (!priceId) {
       console.error("❌ No price ID found in line items");
       return;
@@ -178,11 +178,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const openvasCredits = parseInt(price.metadata.openvas || "0");
     const zapCredits = parseInt(price.metadata.zap || "0");
 
-    console.log(`📈 Adding credits - nmap: ${nmapCredits}, openvas: ${openvasCredits}, zap: ${zapCredits}`);
+    console.log(
+      `📈 Adding credits - nmap: ${nmapCredits}, openvas: ${openvasCredits}, zap: ${zapCredits}`,
+    );
 
     // Get current limits or initialize
     const userData = userDoc.data() || {};
-    const currentLimits = userData.scannerLimits || { nmap: 0, openvas: 0, zap: 0 };
+    const currentLimits = userData.scannerLimits || {
+      nmap: 0,
+      openvas: 0,
+      zap: 0,
+    };
 
     // Add credits to existing limits
     const newLimits = {
@@ -191,10 +197,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       zap: currentLimits.zap + zapCredits,
     };
 
-    console.log(`📊 New limits: nmap: ${newLimits.nmap}, openvas: ${newLimits.openvas}, zap: ${newLimits.zap}`);
+    console.log(
+      `📊 New limits: nmap: ${newLimits.nmap}, openvas: ${newLimits.openvas}, zap: ${newLimits.zap}`,
+    );
 
     await userRef.update({
       scannerLimits: newLimits,
+      subscriptionStatus: "active", // Set to active since they have credits
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -209,12 +218,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   } else if (session.mode === "subscription") {
     // Legacy subscription mode
     const subscriptionId = session.subscription as string;
-    
+
     if (subscriptionId) {
       console.log(`🔍 Fetching subscription details for ${subscriptionId}...`);
       const stripe = await getStripeServerSide();
       if (stripe) {
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const subscription =
+          await stripe.subscriptions.retrieve(subscriptionId);
         const priceId = subscription.items.data[0]?.price.id;
         console.log(`📊 Subscription price ID: ${priceId}`);
         console.log(`📊 Subscription status: ${subscription.status}`);
