@@ -177,6 +177,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const nmapCredits = parseInt(price.metadata.nmap || "0");
     const openvasCredits = parseInt(price.metadata.openvas || "0");
     const zapCredits = parseInt(price.metadata.zap || "0");
+    const planName = price.metadata.plan || "essential";
 
     console.log(
       `📈 Adding credits - nmap: ${nmapCredits}, openvas: ${openvasCredits}, zap: ${zapCredits}`,
@@ -203,7 +204,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
     await userRef.update({
       scannerLimits: newLimits,
-      subscriptionStatus: "active", // Set to active since they have credits
+      subscriptionStatus: "active",
+      currentPlan: planName,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
