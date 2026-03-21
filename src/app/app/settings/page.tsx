@@ -87,36 +87,35 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm font-semibold text-gray-700">
-                    Current Plan
+                    Scan Credits
                   </div>
-                  <div className="text-2xl font-bold text-[#0A1128] mt-1">
-                    {userData?.currentPlan
-                      ? userData.currentPlan.charAt(0).toUpperCase() +
-                        userData.currentPlan.slice(1)
-                      : "Free"}
+                  <div className="text-sm text-[#0A1128] mt-2 space-y-1">
+                    <div>
+                      Nmap:{" "}
+                      <span className="font-bold">
+                        {userData?.scanCredits?.nmap ?? 0}
+                      </span>
+                    </div>
+                    <div>
+                      OpenVAS:{" "}
+                      <span className="font-bold">
+                        {userData?.scanCredits?.openvas ?? 0}
+                      </span>
+                    </div>
+                    <div>
+                      ZAP:{" "}
+                      <span className="font-bold">
+                        {userData?.scanCredits?.zap ?? 0}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <a
                   href="/#pricing"
                   className="px-4 py-2 bg-[#00FED9] text-[#0A1128] font-semibold rounded-lg hover:bg-[#00D4B8] transition-colors"
                 >
-                  Change Plan
+                  Buy More
                 </a>
-              </div>
-
-              <div className="pt-4 border-t border-gray-200">
-                <div className="text-sm font-semibold text-gray-700 mb-2">
-                  Status
-                </div>
-                <span
-                  className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                    userData?.subscriptionStatus === "active"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  {userData?.subscriptionStatus || "inactive"}
-                </span>
               </div>
             </div>
           )}

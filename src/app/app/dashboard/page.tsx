@@ -22,43 +22,19 @@ export default function DashboardPage() {
     currentUser?.uid ?? null,
   );
 
-  const hasActiveSubscription = userData?.subscriptionStatus === "active";
+  const hasCredits = userData
+    ? (userData.scanCredits?.nmap ?? 0) > 0 ||
+      (userData.scanCredits?.openvas ?? 0) > 0 ||
+      (userData.scanCredits?.zap ?? 0) > 0
+    : false;
 
   const stats = useMemo(() => {
-    const limits = userData?.scannerLimits || { nmap: 0, openvas: 0, zap: 0 };
-    const used = userData?.scannersUsedThisMonth || {
-      nmap: 0,
-      openvas: 0,
-      zap: 0,
-    };
+    const credits = userData?.scanCredits || { nmap: 0, openvas: 0, zap: 0 };
+    const used = userData?.scansUsed || { nmap: 0, openvas: 0, zap: 0 };
     return {
-      nmap: {
-        used: typeof used.nmap === "number" ? used.nmap : 0,
-        limit: typeof limits.nmap === "number" ? limits.nmap : 0,
-        remaining: Math.max(
-          0,
-          (typeof limits.nmap === "number" ? limits.nmap : 0) -
-            (typeof used.nmap === "number" ? used.nmap : 0),
-        ),
-      },
-      openvas: {
-        used: typeof used.openvas === "number" ? used.openvas : 0,
-        limit: typeof limits.openvas === "number" ? limits.openvas : 0,
-        remaining: Math.max(
-          0,
-          (typeof limits.openvas === "number" ? limits.openvas : 0) -
-            (typeof used.openvas === "number" ? used.openvas : 0),
-        ),
-      },
-      zap: {
-        used: typeof used.zap === "number" ? used.zap : 0,
-        limit: typeof limits.zap === "number" ? limits.zap : 0,
-        remaining: Math.max(
-          0,
-          (typeof limits.zap === "number" ? limits.zap : 0) -
-            (typeof used.zap === "number" ? used.zap : 0),
-        ),
-      },
+      nmap: { remaining: credits.nmap ?? 0, used: used.nmap ?? 0 },
+      openvas: { remaining: credits.openvas ?? 0, used: used.openvas ?? 0 },
+      zap: { remaining: credits.zap ?? 0, used: used.zap ?? 0 },
     };
   }, [userData]);
 
@@ -79,8 +55,8 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <div className="p-6 lg:p-8 space-y-6 max-w-full">
-        {/* No subscription banner */}
-        {!hasActiveSubscription && (
+        {/* No credits banner */}
+        {!hasCredits && (
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-start gap-4">
               <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[#0A1128]">
@@ -98,15 +74,15 @@ export default function DashboardPage() {
                   href="/#pricing"
                   className="inline-block mt-4 px-5 py-2.5 bg-[#00FED9] text-[#0A1128] font-semibold rounded-lg hover:bg-[#00D4B8] transition-colors"
                 >
-                  View Plans
+                  Buy Credits
                 </Link>
               </div>
             </div>
           </div>
         )}
 
-        {/* Active subscription info */}
-        {hasActiveSubscription && (
+        {/* Credits summary */}
+        {hasCredits && (
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-xl bg-green-50 border border-green-200 text-green-600">
@@ -114,10 +90,12 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1">
                 <h3 className="font-bold text-lg text-[#0A1128]">
-                  {userData?.currentPlan?.toUpperCase()} Plan Active
+                  Scan Credits Available
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  Your subscription is active and ready to use
+                  Nmap: {userData?.scanCredits?.nmap ?? 0} &nbsp;·&nbsp;
+                  OpenVAS: {userData?.scanCredits?.openvas ?? 0} &nbsp;·&nbsp;
+                  ZAP: {userData?.scanCredits?.zap ?? 0}
                 </p>
               </div>
             </div>
@@ -125,7 +103,7 @@ export default function DashboardPage() {
         )}
 
         {/* Stats Grid */}
-        {hasActiveSubscription && (
+        {hasCredits && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Nmap Stats */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
@@ -148,17 +126,10 @@ export default function DashboardPage() {
                     {stats.nmap.remaining}
                   </span>
                   <span className="text-gray-500 text-sm">
-                    / {stats.nmap.limit} scans remaining
+                    credits remaining
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-[#0A1128] h-2 rounded-full transition-all"
-                    style={{
-                      width: `${(stats.nmap.remaining / Math.max(stats.nmap.limit, 1)) * 100}%`,
-                    }}
-                  />
-                </div>
+                <p className="text-xs text-gray-500">{stats.nmap.used} used</p>
               </div>
             </div>
 
@@ -183,17 +154,12 @@ export default function DashboardPage() {
                     {stats.openvas.remaining}
                   </span>
                   <span className="text-gray-500 text-sm">
-                    / {stats.openvas.limit} scans remaining
+                    credits remaining
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-[#0A1128] h-2 rounded-full transition-all"
-                    style={{
-                      width: `${(stats.openvas.remaining / Math.max(stats.openvas.limit, 1)) * 100}%`,
-                    }}
-                  />
-                </div>
+                <p className="text-xs text-gray-500">
+                  {stats.openvas.used} used
+                </p>
               </div>
             </div>
 
@@ -218,24 +184,17 @@ export default function DashboardPage() {
                     {stats.zap.remaining}
                   </span>
                   <span className="text-gray-500 text-sm">
-                    / {stats.zap.limit} scans remaining
+                    credits remaining
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-[#0A1128] h-2 rounded-full transition-all"
-                    style={{
-                      width: `${(stats.zap.remaining / Math.max(stats.zap.limit, 1)) * 100}%`,
-                    }}
-                  />
-                </div>
+                <p className="text-xs text-gray-500">{stats.zap.used} used</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Quick Actions */}
-        {hasActiveSubscription && (
+        {hasCredits && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Link
               href="/app/scans"
@@ -281,7 +240,7 @@ export default function DashboardPage() {
         )}
 
         {/* Recent Scans */}
-        {hasActiveSubscription && recentScans.length > 0 && (
+        {hasCredits && recentScans.length > 0 && (
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-[#0A1128]">Recent Scans</h2>

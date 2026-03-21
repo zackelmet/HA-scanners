@@ -1,7 +1,7 @@
 import { initializeAdmin } from "@/lib/firebase/firebaseAdmin";
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeServerSide } from "@/lib/stripe/getStripeServerSide";
-import { UserDocument, PLAN_LIMITS } from "@/lib/types/user";
+import { UserDocument } from "@/lib/types/user";
 
 const admin = initializeAdmin();
 
@@ -36,27 +36,15 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Create a new user document with full structure
-      const freePlan = PLAN_LIMITS.free;
-      const aggregatedMonthlyLimit = (
-        Object.values(freePlan.scanners) as number[]
-      ).reduce((acc, v) => acc + v, 0);
+      // Create a new user document - minimal fields only
       const newUser: Partial<UserDocument> = {
         uid,
         name: name || "",
         email: email || "",
         stripeCustomerId: stripeCustomerId,
-        stripeSubscriptionId: null,
-        subscriptionStatus: "none",
-        currentPlan: "free",
-        monthlyScansLimit: aggregatedMonthlyLimit,
-        // Initialize per-scanner limits and counters - give 1 free credit to start
-        scannerLimits: { nmap: 1, openvas: 1, zap: 1 },
-        scannersUsedThisMonth: { nmap: 0, openvas: 0, zap: 0 },
-        scansThisMonth: 0,
-        totalScansAllTime: 0,
-        lastMonthlyReset: admin.firestore.FieldValue.serverTimestamp() as any,
-        features: freePlan.features,
+        // Zero credits until they purchase a package
+        scanCredits: { nmap: 0, openvas: 0, zap: 0 },
+        scansUsed: { nmap: 0, openvas: 0, zap: 0 },
         createdAt: admin.firestore.FieldValue.serverTimestamp() as any,
         updatedAt: admin.firestore.FieldValue.serverTimestamp() as any,
       };

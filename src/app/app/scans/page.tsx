@@ -99,20 +99,15 @@ export default function ScansPage() {
     }
   };
 
-  const hasActiveSubscription = userData?.subscriptionStatus === "active";
+  const hasCredits = userData
+    ? (userData.scanCredits?.nmap ?? 0) > 0 ||
+      (userData.scanCredits?.openvas ?? 0) > 0 ||
+      (userData.scanCredits?.zap ?? 0) > 0
+    : false;
 
   const scannerRemaining = (scanner: "nmap" | "openvas" | "zap") => {
     if (!userData) return 0;
-    const limits = userData.scannerLimits || {
-      nmap: 0,
-      openvas: 0,
-      zap: 0,
-    };
-    const used =
-      (userData.scannersUsedThisMonth &&
-        userData.scannersUsedThisMonth[scanner]) ||
-      0;
-    return Math.max(0, (limits[scanner] || 0) - used);
+    return userData.scanCredits?.[scanner] ?? 0;
   };
 
   const formatDate = (ts: any) => {
@@ -340,26 +335,25 @@ export default function ScansPage() {
         {/* New Scan Tab */}
         {activeTab === "new" && (
           <div className="max-w-3xl mx-auto">
-            {!hasActiveSubscription ? (
+            {!hasCredits ? (
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center shadow-sm">
                 <FontAwesomeIcon
                   icon={faRocket}
                   className="text-5xl mb-4 text-[#0A1128]"
                 />
                 <h2 className="text-2xl font-bold text-[#0A1128] mb-3">
-                  Premium Feature
+                  No Scan Credits
                 </h2>
                 <p className="text-gray-600 max-w-xl mx-auto mb-6">
-                  Running security scans requires an active subscription. Choose
-                  a plan that fits your needs and start protecting your
-                  infrastructure today.
+                  Purchase scan credits to start running Nmap, OpenVAS, and
+                  OWASP ZAP scans. Credits are shared across all scanner types.
                 </p>
                 <a
                   href="/#pricing"
                   className="inline-block px-6 py-3 bg-[#00FED9] text-[#0A1128] font-semibold rounded-lg hover:bg-[#00D4B8] transition-colors"
                 >
                   <FontAwesomeIcon icon={faRocket} className="mr-2" />
-                  Upgrade Now
+                  Buy Credits
                 </a>
               </div>
             ) : (
@@ -399,8 +393,7 @@ export default function ScansPage() {
                             Port scanning and service detection
                           </div>
                           <div className="text-xs text-[#0A1128] mt-1 font-semibold">
-                            {scannerRemaining("nmap")} /{" "}
-                            {userData?.scannerLimits?.nmap ?? 0} scans remaining
+                            {scannerRemaining("nmap")} credits remaining
                           </div>
                         </div>
                       </label>
@@ -421,9 +414,7 @@ export default function ScansPage() {
                             CVE detection and security analysis
                           </div>
                           <div className="text-xs text-[#0A1128] mt-1 font-semibold">
-                            {scannerRemaining("openvas")} /{" "}
-                            {userData?.scannerLimits?.openvas ?? 0} scans
-                            remaining
+                            {scannerRemaining("openvas")} credits remaining
                           </div>
                         </div>
                       </label>
@@ -444,8 +435,7 @@ export default function ScansPage() {
                             Web vulnerabilities and OWASP Top 10
                           </div>
                           <div className="text-xs text-[#0A1128] mt-1 font-semibold">
-                            {scannerRemaining("zap")} /{" "}
-                            {userData?.scannerLimits?.zap ?? 0} scans remaining
+                            {scannerRemaining("zap")} credits remaining
                           </div>
                         </div>
                       </label>
@@ -648,8 +638,8 @@ export default function ScansPage() {
                     </p>
                     {selectedScanners?.map((scanner) => (
                       <p key={scanner} className="text-sm text-gray-700 ml-2">
-                        • {scanner.toUpperCase()}: {scannerRemaining(scanner)} /{" "}
-                        {userData?.scannerLimits?.[scanner] ?? 0}
+                        • {scanner.toUpperCase()}: {scannerRemaining(scanner)}{" "}
+                        credits remaining
                       </p>
                     ))}
                   </div>

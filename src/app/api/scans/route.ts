@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { initializeAdmin } from "@/lib/firebase/firebaseAdmin";
 import { CreateScanRequest } from "@/lib/types/scanner";
-import {
-  UserDocument,
-  getPlanLimits,
-  ScanMetadata,
-} from "@/lib/types/user";
+import { UserDocument } from "@/lib/types/user";
 
 export async function POST(request: NextRequest) {
   try {
@@ -163,68 +159,27 @@ export async function POST(request: NextRequest) {
 
     const userData = userDoc.data() as UserDocument;
 
-    // Require active subscription to run scans
-    if (userData.subscriptionStatus !== "active") {
-      return NextResponse.json(
-        {
-          error: "Active subscription required to run scans",
-          message: "Please subscribe to a plan to start scanning",
-          currentPlan: userData.currentPlan || "free",
-          subscriptionStatus: userData.subscriptionStatus,
-        },
-        { status: 403 },
-      );
-    }
-
-    // Get plan limits
-    const planLimits = getPlanLimits(userData.currentPlan);
-
-    // Initialize missing fields if needed
-    const needsInit =
-      !userData.scannerLimits || !userData.scannersUsedThisMonth;
-    if (needsInit) {
-      const initData: any = {
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      };
-      if (!userData.scannerLimits) {
-        initData.scannerLimits = planLimits.scanners;
-        userData.scannerLimits = planLimits.scanners;
-      }
-      if (!userData.scannersUsedThisMonth) {
-        initData.scannersUsedThisMonth = { nmap: 0, openvas: 0, zap: 0 };
-        userData.scannersUsedThisMonth = { nmap: 0, openvas: 0, zap: 0 };
-      }
-      await userDocRef.set(initData, { merge: true });
-    }
-
-    // Enforce per-scanner limits (no monthly reset)
     const scanner = type as "nmap" | "openvas" | "zap";
-
-    // Determine user's scanner limits (fall back to plan defaults)
-    const userScannerLimits = userData.scannerLimits || planLimits.scanners;
-    const scannerLimit = userScannerLimits?.[scanner] ?? 0;
-
-    // Determine current used count (try user doc counters first)
-    const usedThisMonth =
-      (userData.scannersUsedThisMonth &&
-        userData.scannersUsedThisMonth[scanner]) ||
-      0;
-
-    // Check if user has enough quota for all targets
     const scansNeeded = normalizedTargets.length;
-    const remainingQuota = scannerLimit - usedThisMonth;
 
-    if (remainingQuota < scansNeeded) {
+    // Ensure credit fields exist (safety net for legacy docs)
+    const scanCredits = userData.scanCredits || { nmap: 0, openvas: 0, zap: 0 };
+    const scansUsed = userData.scansUsed || { nmap: 0, openvas: 0, zap: 0 };
+
+    const creditsAvailable = scanCredits[scanner] ?? 0;
+
+    // Gate on credits — no credits = no scan
+    if (creditsAvailable < scansNeeded) {
       return NextResponse.json(
         {
-          error: "Insufficient scanner quota",
-          message: `This ${scansNeeded > 1 ? `batch requires ${scansNeeded} scans but you only have ${remainingQuota} ${scanner} scans remaining` : `scan would exceed your monthly quota of ${scannerLimit} ${scanner} scans`}. Upgrade your plan for more scans.`,
-          scansUsed: usedThisMonth,
-          scanLimit: scannerLimit,
+          error: "Insufficient scan credits",
+          message:
+            scansNeeded > 1
+              ? `This batch requires ${scansNeeded} ${scanner} credits but you only have ${creditsAvailable} remaining.`
+              : `You have no ${scanner} credits remaining.`,
+          creditsAvailable,
           scansNeeded,
-          remainingQuota,
-          scanner: scanner,
-          currentPlan: userData.currentPlan,
+          scanner,
         },
         { status: 429 },
       );
@@ -244,17 +199,15 @@ export async function POST(request: NextRequest) {
       await firestore.runTransaction(async (tx) => {
         const freshUser = (await tx.get(userDocRef)).data() as any;
 
-        // Re-check quota inside transaction
-        const currentUsed =
-          (freshUser.scannersUsedThisMonth &&
-            freshUser.scannersUsedThisMonth[scanner]) ||
-          0;
-        const currentLimit =
-          (freshUser.scannerLimits && freshUser.scannerLimits[scanner]) ||
-          userScannerLimits[scanner];
-        const currentRemaining = currentLimit - currentUsed;
+        // Re-check credits inside transaction to prevent race conditions
+        const freshCredits = freshUser.scanCredits || {
+          nmap: 0,
+          openvas: 0,
+          zap: 0,
+        };
+        const freshAvailable = (freshCredits[scanner] as number) ?? 0;
 
-        if (currentRemaining < scansNeeded) {
+        if (freshAvailable < scansNeeded) {
           throw new Error("QuotaExceeded");
         }
 
@@ -282,39 +235,24 @@ export async function POST(request: NextRequest) {
           scanRefs.push(newScanRef);
         }
 
-        // Increment per-scanner usage counters on user doc (by scansNeeded count)
-        const updateData: any = {
-          scansThisMonth: admin.firestore.FieldValue.increment(scansNeeded),
-          totalScansAllTime: admin.firestore.FieldValue.increment(scansNeeded),
-          lastScanDate: admin.firestore.FieldValue.serverTimestamp(),
+        // Decrement scanCredits and increment scansUsed atomically
+        tx.update(userDocRef, {
+          [`scanCredits.${scanner}`]:
+            admin.firestore.FieldValue.increment(-scansNeeded),
+          [`scansUsed.${scanner}`]:
+            admin.firestore.FieldValue.increment(scansNeeded),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-
-        // Initialize scannersUsedThisMonth if it doesn't exist
-        if (!freshUser.scannersUsedThisMonth) {
-          updateData.scannersUsedThisMonth = {
-            nmap: scanner === "nmap" ? scansNeeded : 0,
-            openvas: scanner === "openvas" ? scansNeeded : 0,
-            zap: scanner === "zap" ? scansNeeded : 0,
-          };
-        } else {
-          updateData[`scannersUsedThisMonth.${scanner}`] =
-            admin.firestore.FieldValue.increment(scansNeeded);
-        }
-
-        tx.update(userDocRef, updateData);
+        });
       });
     } catch (err: any) {
       if (err && err.message === "QuotaExceeded") {
         return NextResponse.json(
           {
-            error: "Insufficient scanner quota",
-            message: `Batch requires ${scansNeeded} scans but you only have ${remainingQuota} ${scanner} scans remaining. Upgrade your plan for more scans.`,
-            scansUsed: usedThisMonth,
-            scanLimit: scannerLimit,
+            error: "Insufficient scan credits",
+            message: `Not enough ${scanner} credits. Please purchase more.`,
+            creditsAvailable,
             scansNeeded,
-            remainingQuota,
-            currentPlan: userData.currentPlan,
+            scanner,
           },
           { status: 429 },
         );
@@ -423,11 +361,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Compute remaining quota
-    const remainingAfter = Math.max(
-      0,
-      scannerLimit - (usedThisMonth + scansNeeded),
-    );
+    // Compute credits remaining after this batch
+    const remainingAfter = Math.max(0, creditsAvailable - scansNeeded);
 
     return NextResponse.json(
       {
@@ -444,9 +379,7 @@ export async function POST(request: NextRequest) {
           status: "queued",
         })),
         scanner,
-        scansUsed: usedThisMonth + scansNeeded,
-        scanLimit: scannerLimit,
-        scansRemaining: remainingAfter,
+        creditsRemaining: remainingAfter,
       },
       { status: 201 },
     );

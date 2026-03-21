@@ -30,9 +30,8 @@ export function useUserData() {
         if (doc.exists()) {
           const data = doc.data() as UserDocument;
           console.log("📊 useUserData: User data updated:", {
-            subscriptionStatus: data.subscriptionStatus,
-            currentPlan: data.currentPlan,
-            monthlyScansLimit: data.monthlyScansLimit,
+            scanCredits: data.scanCredits,
+            scansUsed: data.scansUsed,
           });
           setUserData(data);
         } else {
