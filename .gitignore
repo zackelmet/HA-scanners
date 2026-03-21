@@ -41,3 +41,4 @@ gcp/keys/*.json
 gemini.md
 .gemini/
 **/package-lock.json
+gcp/scanner-vm/finish_setup.sh
