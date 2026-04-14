@@ -103,9 +103,9 @@ export default function SettingsPage() {
                       </span>
                     </div>
                     <div>
-                      ZAP:{" "}
+                      WASP:{" "}
                       <span className="font-bold">
-                        {userData?.scanCredits?.zap ?? 0}
+                        {userData?.scanCredits?.wasp ?? 0}
                       </span>
                     </div>
                   </div>

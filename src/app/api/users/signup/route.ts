@@ -43,8 +43,8 @@ export async function POST(req: NextRequest) {
         email: email || "",
         stripeCustomerId: stripeCustomerId,
         // Zero credits until they purchase a package
-        scanCredits: { nmap: 0, nuclei: 0, zap: 0 },
-        scansUsed: { nmap: 0, nuclei: 0, zap: 0 },
+        scanCredits: { nmap: 0, nuclei: 0, wasp: 0 },
+        scansUsed: { nmap: 0, nuclei: 0, wasp: 0 },
         createdAt: admin.firestore.FieldValue.serverTimestamp() as any,
         updatedAt: admin.firestore.FieldValue.serverTimestamp() as any,
       };

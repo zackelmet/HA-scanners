@@ -1,6 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 
-export type ScanType = "nmap" | "nuclei" | "zap";
+export type ScanType = "nmap" | "nuclei" | "wasp";
 export type ScanStatus =
   | "queued"
   | "running"
@@ -16,7 +16,7 @@ export interface Scan {
   status: ScanStatus;
   targetId: string; // References Target.id
   targetValue: string; // The snapshot of the target URL/IP at scan time
-  options: NmapOptions | NucleiOptions | ZapOptions;
+  options: NmapOptions | NucleiOptions | WaspOptions;
   createdAt: Timestamp;
   startedAt?: Timestamp;
   completedAt?: Timestamp;
@@ -36,11 +36,7 @@ export interface NucleiOptions {
   templates?: string; // optional: specific template paths
 }
 
-export interface NiktoOptions {
-  template?: string;
-}
-
-export interface ZapOptions {
+export interface WaspOptions {
   scanProfile: "quick" | "active" | "full";
   scanType?: "quick" | "active" | "full"; // legacy alias
 }
@@ -111,7 +107,7 @@ export interface ScanSummary {
 export interface CreateScanRequest {
   type: ScanType;
   targetId: string;
-  options: NmapOptions | NucleiOptions | ZapOptions;
+  options: NmapOptions | NucleiOptions | WaspOptions;
 }
 
 export interface ScanQueue {

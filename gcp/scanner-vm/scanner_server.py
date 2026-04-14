@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Unified Scanner Server
-Receives scan jobs via HTTP, queues them, runs nmap/nuclei/zap,
+Receives scan jobs via HTTP, queues them, runs nmap/nuclei/wasp,
 uploads XML/JSON + PDF results to GCS, then POSTs back to the webapp webhook.
 """
 
@@ -70,8 +70,8 @@ def enqueue_scan():
             return jsonify({"error": f"Missing field: {field}"}), 400
 
     scanner = data["scanner"].lower()
-    if scanner not in ("nmap", "nuclei", "zap"):
-        return jsonify({"error": "scanner must be nmap, nuclei, or zap"}), 400
+    if scanner not in ("nmap", "nuclei", "wasp"):
+        return jsonify({"error": "scanner must be nmap, nuclei, or wasp"}), 400
 
     job = {
         "scanId":   data["scanId"],
@@ -125,8 +125,8 @@ def process_job(job: dict):
                 xml_path, summary = run_nmap(target, tmp, job.get("options", {}))
             elif scanner == "nuclei":
                 xml_path, summary = run_nuclei(target, tmp, job.get("options", {}))
-            elif scanner == "zap":
-                xml_path, summary = run_zap(target, tmp, job.get("options", {}))
+            elif scanner == "wasp":
+                xml_path, summary = run_wasp(target, tmp, job.get("options", {}))
             else:
                 raise ValueError(f"Unknown scanner: {scanner}")
 
@@ -249,21 +249,22 @@ def summarize_nuclei(findings: list[dict]) -> dict:
         })
     return {"total_findings": len(findings), "severity_counts": severity_counts, "findings": parsed[:20]}
 
-def run_zap(target: str, tmp: Path, options: dict) -> tuple[Path, dict]:
+def run_wasp(target: str, tmp: Path, options: dict) -> tuple[Path, dict]:
     """
-    Run OWASP ZAP via the snap zaproxy CLI in daemon mode with the ZAP REST API.
+    Run WASP (Web Application Security Scanner) via the zaproxy CLI in daemon
+    mode with the ZAP REST API.
     The snap wrapper needs a valid HOME with write permissions.
     """
     import socket
     import time as _time
-    xml_out = tmp / "zap.xml"
+    xml_out = tmp / "wasp.xml"
     scan_type = options.get("scan_type", "baseline")  # baseline | full
 
     zap_bin = "/snap/bin/zaproxy"
     zap_port = 8090
     api_key  = "hackeranalytics-zap-key"
 
-    # Ensure a writable HOME directory exists for ZAP/snap
+    # Ensure a writable HOME directory exists for WASP/snap
     zap_home = Path("/opt/scanner/zap-home")
     zap_home.mkdir(parents=True, exist_ok=True)
 
@@ -285,7 +286,7 @@ def run_zap(target: str, tmp: Path, options: dict) -> tuple[Path, dict]:
         "-config", "api.addrs.addr.regex=true",
         "-config", "connection.timeoutInSecs=120",
     ]
-    log.info(f"ZAP daemon cmd: {' '.join(zap_cmd)}")
+    log.info(f"WASP daemon cmd: {' '.join(zap_cmd)}")
     zap_proc = subprocess.Popen(
         zap_cmd,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -293,7 +294,7 @@ def run_zap(target: str, tmp: Path, options: dict) -> tuple[Path, dict]:
     )
 
     try:
-        # Wait up to 180s for ZAP to bind its port (snap init is slow)
+        # Wait up to 180s for WASP to bind its port (snap init is slow)
         deadline = _time.time() + 180
         while _time.time() < deadline:
             try:
@@ -303,7 +304,7 @@ def run_zap(target: str, tmp: Path, options: dict) -> tuple[Path, dict]:
                 # Check if process died
                 if zap_proc.poll() is not None:
                     out = zap_proc.stdout.read().decode(errors="replace") if zap_proc.stdout else ""
-                    raise RuntimeError(f"ZAP daemon exited early (rc={zap_proc.returncode}): {out[-500:]}")
+                    raise RuntimeError(f"WASP daemon exited early (rc={zap_proc.returncode}): {out[-500:]}")
                 _time.sleep(3)
         else:
             out = ""
@@ -312,11 +313,11 @@ def run_zap(target: str, tmp: Path, options: dict) -> tuple[Path, dict]:
                 out = zap_proc.stdout.read().decode(errors="replace") if zap_proc.stdout else ""
             except Exception:
                 pass
-            raise RuntimeError(f"ZAP daemon did not start within 180s. Output: {out[-500:]}")
+            raise RuntimeError(f"WASP daemon did not start within 180s. Output: {out[-500:]}")
 
-        # Give ZAP a moment to finish internal init after port is open
+        # Give WASP a moment to finish internal init after port is open
         _time.sleep(5)
-        log.info("ZAP daemon ready on port %d", zap_port)
+        log.info("WASP daemon ready on port %d", zap_port)
 
         base_url = f"http://127.0.0.1:{zap_port}"
         headers  = {"Accept": "application/json"}
@@ -328,28 +329,28 @@ def run_zap(target: str, tmp: Path, options: dict) -> tuple[Path, dict]:
             return r.json()
 
         # Spider the target
-        log.info(f"ZAP spider: {target}")
+        log.info(f"WASP spider: {target}")
         r = zap_get("JSON/spider/action/scan", {"url": target, "maxChildren": "20", "recurse": "true"})
         spider_id = r.get("scan", "0")
         timeout_spider = _time.time() + 600  # 10 min max
         while _time.time() < timeout_spider:
             r = zap_get("JSON/spider/view/status", {"scanId": spider_id})
             pct = int(r.get("status", 100))
-            log.info(f"ZAP spider {pct}%")
+            log.info(f"WASP spider {pct}%")
             if pct >= 100:
                 break
             _time.sleep(5)
 
         if scan_type == "full":
             # Active scan
-            log.info(f"ZAP active scan: {target}")
+            log.info(f"WASP active scan: {target}")
             r = zap_get("JSON/ascan/action/scan", {"url": target, "recurse": "true", "inScopeOnly": "false"})
             ascan_id = r.get("scan", "0")
             timeout_ascan = _time.time() + 1200  # 20 min max
             while _time.time() < timeout_ascan:
                 r = zap_get("JSON/ascan/view/status", {"scanId": ascan_id})
                 pct = int(r.get("status", 100))
-                log.info(f"ZAP active scan {pct}%")
+                log.info(f"WASP active scan {pct}%")
                 if pct >= 100:
                     break
                 _time.sleep(10)
@@ -359,7 +360,7 @@ def run_zap(target: str, tmp: Path, options: dict) -> tuple[Path, dict]:
         rp = requests.get(report_url, params={"apikey": api_key}, timeout=60)
         rp.raise_for_status()
         xml_out.write_bytes(rp.content)
-        log.info(f"ZAP XML report saved ({len(rp.content)} bytes)")
+        log.info(f"WASP XML report saved ({len(rp.content)} bytes)")
 
     finally:
         zap_proc.terminate()
@@ -375,10 +376,10 @@ def run_zap(target: str, tmp: Path, options: dict) -> tuple[Path, dict]:
             f'<?xml version="1.0"?><OWASPZAPReport version="2.14">'
             f'<site host="{target}"><alerts></alerts></site></OWASPZAPReport>'
         )
-    summary = parse_zap_summary(xml_out)
+    summary = parse_wasp_summary(xml_out)
     return xml_out, summary
 
-def parse_zap_summary(xml_path: Path) -> dict:
+def parse_wasp_summary(xml_path: Path) -> dict:
     try:
         tree = ET.parse(xml_path)
         root = tree.getroot()
@@ -449,8 +450,8 @@ def generate_pdf(scan_id: str, scanner: str, target: str, xml_path: Path, tmp: P
         _add_nmap_content(story, xml_path, h2_style, body_style, code_style)
     elif scanner == "nuclei":
         _add_nuclei_content(story, xml_path, h2_style, body_style)
-    elif scanner == "zap":
-        _add_zap_content(story, xml_path, h2_style, body_style)
+    elif scanner == "wasp":
+        _add_wasp_content(story, xml_path, h2_style, body_style)
 
     # Footer note
     story.append(Spacer(1, 0.3*inch))
@@ -544,7 +545,7 @@ def _add_nuclei_content(story, xml_path, h2, body):
     except Exception as e:
         story.append(Paragraph(f"Could not parse XML: {e}", body))
 
-def _add_zap_content(story, xml_path, h2, body):
+def _add_wasp_content(story, xml_path, h2, body):
     story.append(Paragraph("Web Application Findings", h2))
     try:
         tree = ET.parse(xml_path)

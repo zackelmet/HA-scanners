@@ -150,31 +150,31 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const nmapCredits = parseInt(price.metadata.nmap || "0");
   const nucleiCredits = parseInt(price.metadata.nuclei || "0");
-  const zapCredits = parseInt(price.metadata.zap || "0");
+  const waspCredits = parseInt(price.metadata.wasp || "0");
 
-  if (nmapCredits === 0 && nucleiCredits === 0 && zapCredits === 0) {
+  if (nmapCredits === 0 && nucleiCredits === 0 && waspCredits === 0) {
     console.error(
-      "❌ Price has no credit metadata (nmap/nuclei/zap). Add metadata to this Stripe price.",
+      "❌ Price has no credit metadata (nmap/nuclei/wasp). Add metadata to this Stripe price.",
     );
     return;
   }
 
   console.log(
-    `📈 Credits purchased — nmap: ${nmapCredits}, nuclei: ${nucleiCredits}, zap: ${zapCredits}`,
+    `📈 Credits purchased — nmap: ${nmapCredits}, nuclei: ${nucleiCredits}, wasp: ${waspCredits}`,
   );
 
   // Atomically increment scanCredits for each scanner
   await userRef.update({
     "scanCredits.nmap": admin.firestore.FieldValue.increment(nmapCredits),
     "scanCredits.nuclei": admin.firestore.FieldValue.increment(nucleiCredits),
-    "scanCredits.zap": admin.firestore.FieldValue.increment(zapCredits),
+    "scanCredits.wasp": admin.firestore.FieldValue.increment(waspCredits),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
   // Ensure scansUsed exists (set to 0 if brand-new user)
   const fresh = (await userRef.get()).data() as UserDocument | undefined;
   if (!fresh?.scansUsed) {
-    await userRef.update({ scansUsed: { nmap: 0, nuclei: 0, zap: 0 } });
+    await userRef.update({ scansUsed: { nmap: 0, nuclei: 0, wasp: 0 } });
   }
 
   console.log(`✅ scanCredits updated for user ${userId}`);

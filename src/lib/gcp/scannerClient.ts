@@ -1,7 +1,7 @@
 export interface ScanJob {
   scanId: string;
   userId: string;
-  type: "nmap" | "nuclei" | "zap";
+  type: "nmap" | "nuclei" | "wasp";
   target: string;
   options?: any;
   callbackUrl: string;
@@ -10,7 +10,7 @@ export interface ScanJob {
 /**
  * Enqueues a scan job by POSTing to the unified scanner VM at GCP_SCANNER_URL.
  * The VM runs a Flask server with a thread-safe job queue. It handles all
- * scanner types (nmap, nuclei, zap) and POSTs results back via webhook.
+ * scanner types (nmap, nuclei, wasp) and POSTs results back via webhook.
  */
 export async function enqueueScanJob(job: ScanJob): Promise<void> {
   const baseUrl = (process.env.GCP_SCANNER_URL || "").trim().replace(/\/$/, "");

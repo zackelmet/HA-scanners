@@ -163,7 +163,7 @@ export default function AuthForm() {
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start text-sm text-[var(--text-muted)]">
               <span className="neon-chip">Nuclei vulnerability scanner</span>
               <span className="neon-chip">Nmap port scanner</span>
-              <span className="neon-chip">OWASP ZAP web scanner</span>
+              <span className="neon-chip">WASP web scanner</span>
             </div>
           </div>
 

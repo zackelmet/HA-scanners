@@ -3,7 +3,7 @@ import { Timestamp } from "firebase-admin/firestore";
 export interface ScannerCredits {
   nmap: number;
   nuclei: number;
-  zap: number;
+  wasp: number;
 }
 
 export interface UserDocument {
@@ -36,7 +36,7 @@ export interface SavedTarget {
 }
 export interface ScanMetadata {
   scanId: string;
-  type: "nmap" | "nuclei" | "zap";
+  type: "nmap" | "nuclei" | "wasp";
   target: string;
   status: "queued" | "running" | "completed" | "failed";
   batchId?: string; // Groups scans from the same multi-target job
@@ -52,10 +52,10 @@ export interface ScanMetadata {
 }
 
 // Credit amounts per purchase package — driven by Stripe price metadata
-// Each price has metadata: nmap=N, nuclei=N, zap=N
+// Each price has metadata: nmap=N, nuclei=N, wasp=N
 // These are the defaults if metadata is missing
 export const CREDIT_PACKAGES = {
-  starter: { nmap: 10, nuclei: 10, zap: 10 }, // $10
-  professional: { nmap: 25, nuclei: 25, zap: 25 }, // $50
-  enterprise: { nmap: 100, nuclei: 100, zap: 100 }, // $500
+  starter: { nmap: 10, nuclei: 10, wasp: 10 }, // $10
+  professional: { nmap: 25, nuclei: 25, wasp: 25 }, // $50
+  enterprise: { nmap: 100, nuclei: 100, wasp: 100 }, // $500
 } as const;

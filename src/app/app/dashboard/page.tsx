@@ -59,16 +59,16 @@ export default function DashboardPage() {
   const hasCredits = userData
     ? (userData.scanCredits?.nmap ?? 0) > 0 ||
       (userData.scanCredits?.nuclei ?? 0) > 0 ||
-      (userData.scanCredits?.zap ?? 0) > 0
+      (userData.scanCredits?.wasp ?? 0) > 0
     : false;
 
   const stats = useMemo(() => {
-    const credits = userData?.scanCredits || { nmap: 0, nuclei: 0, zap: 0 };
-    const used = userData?.scansUsed || { nmap: 0, nuclei: 0, zap: 0 };
+    const credits = userData?.scanCredits || { nmap: 0, nuclei: 0, wasp: 0 };
+    const used = userData?.scansUsed || { nmap: 0, nuclei: 0, wasp: 0 };
     return {
       nmap: { remaining: credits.nmap ?? 0, used: used.nmap ?? 0 },
       nuclei: { remaining: credits.nuclei ?? 0, used: used.nuclei ?? 0 },
-      zap: { remaining: credits.zap ?? 0, used: used.zap ?? 0 },
+      wasp: { remaining: credits.wasp ?? 0, used: used.wasp ?? 0 },
     };
   }, [userData]);
 
@@ -101,8 +101,8 @@ export default function DashboardPage() {
                   Buy Credits to Start Scanning
                 </h3>
                 <p className="text-gray-600 mt-1">
-                  Purchase scan credits to unlock hosted Nmap, Nuclei, and OWASP
-                  ZAP scanning. Starting at $10 for 10 scans.
+                  Purchase scan credits to unlock hosted Nmap, Nuclei, and WASP
+                  scanning. Starting at $10 for 10 scans.
                 </p>
                 <Link
                   href="/#pricing"
@@ -130,7 +130,7 @@ export default function DashboardPage() {
                   <p className="text-gray-600 text-sm">
                     Nmap: {userData?.scanCredits?.nmap ?? 0} &nbsp;·&nbsp;
                     Nuclei: {userData?.scanCredits?.nuclei ?? 0} &nbsp;·&nbsp;
-                    ZAP: {userData?.scanCredits?.zap ?? 0}
+                    WASP: {userData?.scanCredits?.wasp ?? 0}
                   </p>
                 </div>
               </div>
@@ -222,12 +222,12 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* ZAP Stats */}
+            {/* WASP Stats */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="font-semibold text-[#0A1128]">
-                    OWASP ZAP - Web Application Scanner
+                    WASP - Web Application Scanner
                   </h3>
                   <p className="text-sm text-gray-600">
                     Web vulnerabilities and OWASP Top 10
@@ -240,13 +240,13 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-[#0A1128]">
-                    {stats.zap.remaining}
+                    {stats.wasp.remaining}
                   </span>
                   <span className="text-gray-500 text-sm">
                     credits remaining
                   </span>
                 </div>
-                <p className="text-xs text-gray-500">{stats.zap.used} used</p>
+                <p className="text-xs text-gray-500">{stats.wasp.used} used</p>
               </div>
             </div>
           </div>

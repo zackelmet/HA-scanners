@@ -88,11 +88,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate scan type
-    if (type !== "nmap" && type !== "nuclei" && type !== "zap") {
+    if (type !== "nmap" && type !== "nuclei" && type !== "wasp") {
       console.log("Invalid scan type requested:", type);
       return NextResponse.json(
         {
-          error: "Invalid scan type. Must be 'nmap', 'nuclei', or 'zap'",
+          error: "Invalid scan type. Must be 'nmap', 'nuclei', or 'wasp'",
         },
         { status: 400 },
       );
@@ -102,8 +102,8 @@ export async function POST(request: NextRequest) {
     const normalizeTarget = (targetStr: string): string | null => {
       let normalized = targetStr.trim();
 
-      if (type === "zap") {
-        // ZAP requires full URLs with protocol
+      if (type === "wasp") {
+        // WASP requires full URLs with protocol
         if (!/^https?:\/\//i.test(normalized)) {
           normalized = `http://${normalized}`;
         }
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
           new URL(normalized);
           return normalized;
         } catch (e) {
-          console.log("Invalid ZAP target format:", normalized);
+          console.log("Invalid WASP target format:", normalized);
           return null;
         }
       } else {
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       if (!normalized) {
         return NextResponse.json(
           {
-            error: `Invalid target format: ${t}. ${type === "zap" ? "Must be a valid URL" : "Must be a valid IP address or domain name"}`,
+            error: `Invalid target format: ${t}. ${type === "wasp" ? "Must be a valid URL" : "Must be a valid IP address or domain name"}`,
           },
           { status: 400 },
         );
@@ -161,12 +161,12 @@ export async function POST(request: NextRequest) {
 
     const userData = userDoc.data() as UserDocument;
 
-    const scanner = type as "nmap" | "nuclei" | "zap";
+    const scanner = type as "nmap" | "nuclei" | "wasp";
     const scansNeeded = normalizedTargets.length;
 
     // Ensure credit fields exist (safety net for legacy docs)
-    const scanCredits = userData.scanCredits || { nmap: 0, nuclei: 0, zap: 0 };
-    const scansUsed = userData.scansUsed || { nmap: 0, nuclei: 0, zap: 0 };
+    const scanCredits = userData.scanCredits || { nmap: 0, nuclei: 0, wasp: 0 };
+    const scansUsed = userData.scansUsed || { nmap: 0, nuclei: 0, wasp: 0 };
 
     const creditsAvailable = scanCredits[scanner] ?? 0;
 
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
         const freshCredits = freshUser.scanCredits || {
           nmap: 0,
           nuclei: 0,
-          zap: 0,
+          wasp: 0,
         };
         const freshAvailable = (freshCredits[scanner] as number) ?? 0;
 

@@ -23,9 +23,9 @@ type TabKey = "new" | "history";
 export default function ScansPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("new");
   const [selectedScanners, setSelectedScanners] = useState<
-    ("nmap" | "nuclei" | "zap")[]
+    ("nmap" | "nuclei" | "wasp")[]
   >(["nmap"]);
-  const [zapProfile, setZapProfile] = useState<"quick" | "active" | "full">(
+  const [waspProfile, setWaspProfile] = useState<"quick" | "active" | "full">(
     "active",
   );
   const [submitting, setSubmitting] = useState(false);
@@ -68,7 +68,7 @@ export default function ScansPage() {
     [savedTargets, selectedTargetId],
   );
 
-  const toggleScanner = (scanner: "nmap" | "nuclei" | "zap") => {
+  const toggleScanner = (scanner: "nmap" | "nuclei" | "wasp") => {
     setSelectedScanners((prev) => {
       if (prev.includes(scanner)) {
         // Don't allow deselecting if it's the only one
@@ -87,10 +87,10 @@ export default function ScansPage() {
   const hasCredits = userData
     ? (userData.scanCredits?.nmap ?? 0) > 0 ||
       (userData.scanCredits?.nuclei ?? 0) > 0 ||
-      (userData.scanCredits?.zap ?? 0) > 0
+      (userData.scanCredits?.wasp ?? 0) > 0
     : false;
 
-  const scannerRemaining = (scanner: "nmap" | "nuclei" | "zap") => {
+  const scannerRemaining = (scanner: "nmap" | "nuclei" | "wasp") => {
     if (!userData) return 0;
     return userData.scanCredits?.[scanner] ?? 0;
   };
@@ -147,7 +147,7 @@ export default function ScansPage() {
 
       const token = await user.getIdToken(true);
       const nmapOptions = { topPorts: 100 };
-      const zapOptions = { scanProfile: zapProfile };
+      const waspOptions = { scanProfile: waspProfile };
 
       const results = [];
       const errors = [];
@@ -166,8 +166,8 @@ export default function ScansPage() {
               options:
                 scannerType === "nmap"
                   ? nmapOptions
-                  : scannerType === "zap"
-                    ? zapOptions
+                  : scannerType === "wasp"
+                    ? waspOptions
                     : {},
             }),
           });
@@ -266,8 +266,8 @@ export default function ScansPage() {
                   No Scan Credits
                 </h2>
                 <p className="text-gray-600 max-w-xl mx-auto mb-6">
-                  Purchase scan credits to start running Nmap, Nuclei, and OWASP
-                  ZAP scans. Credits are shared across all scanner types.
+                  Purchase scan credits to start running Nmap, Nuclei, and WASP
+                  scans. Credits are shared across all scanner types.
                 </p>
                 <a
                   href="/#pricing"
@@ -340,23 +340,23 @@ export default function ScansPage() {
                         </div>
                       </label>
 
-                      {/* ZAP Checkbox */}
+                      {/* WASP Checkbox */}
                       <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-[#0A1128] cursor-pointer transition-colors">
                         <input
                           type="checkbox"
-                          checked={selectedScanners.includes("zap")}
-                          onChange={() => toggleScanner("zap")}
+                          checked={selectedScanners.includes("wasp")}
+                          onChange={() => toggleScanner("wasp")}
                           className="mt-1 h-4 w-4 text-[#0A1128] rounded focus:ring-[#0A1128]"
                         />
                         <div className="flex-1">
                           <div className="font-semibold text-[#0A1128]">
-                            OWASP ZAP - Web Application Scanner
+                            WASP - Web Application Scanner
                           </div>
                           <div className="text-xs text-gray-600">
                             Web vulnerabilities and OWASP Top 10
                           </div>
                           <div className="text-xs text-[#0A1128] mt-1 font-semibold">
-                            {scannerRemaining("zap")} credits remaining
+                            {scannerRemaining("wasp")} credits remaining
                           </div>
                         </div>
                       </label>
@@ -399,17 +399,17 @@ export default function ScansPage() {
                     </div>
                   </div>
 
-                  {/* ZAP Profile */}
-                  {selectedScanners.includes("zap") && (
+                  {/* WASP Profile */}
+                  {selectedScanners.includes("wasp") && (
                     <div>
                       <label className="block text-sm font-semibold text-[#0A1128] mb-2">
                         Scan Profile
                       </label>
                       <select
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00FED9] focus:border-transparent"
-                        value={zapProfile}
+                        value={waspProfile}
                         onChange={(e) =>
-                          setZapProfile(
+                          setWaspProfile(
                             e.target.value as "quick" | "active" | "full",
                           )
                         }

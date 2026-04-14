@@ -183,7 +183,7 @@ export default function TargetsPage() {
               >
                 <option value="domain">Domain Name</option>
                 <option value="ip">IP Address</option>
-                <option value="url">URL (e.g. for ZAP)</option>
+                <option value="url">URL (e.g. for WASP)</option>
               </select>
             </label>
           </div>
