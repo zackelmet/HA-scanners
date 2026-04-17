@@ -13,14 +13,14 @@ export default function Footer() {
           <div className="flex items-center gap-3">
             <Image
               src="/HA-logo.png"
-              alt="HA logo"
+              alt="VulnScanners logo"
               width={42}
               height={42}
               className="h-10 w-auto"
             />
             <div className="space-y-1">
               <div className="text-lg font-semibold tracking-tight">
-                Hacker Analytics
+                VulnScanners
               </div>
               <div className="text-sm neon-subtle">
                 Hosted security scanners
@@ -49,7 +49,7 @@ export default function Footer() {
                 </span>
               </Link>
               <Link
-                href="https://www.linkedin.com/company/hacker-analytics/"
+                href="https://www.linkedin.com/company/vulnscanners/"
                 target="_blank"
                 rel="noreferrer"
                 className="hover:text-[var(--primary)] transition"
@@ -76,7 +76,7 @@ export default function Footer() {
             </Link>
           </div>
           <div className="text-xs sm:text-sm">
-            © {year} HA. All rights reserved.
+            © {year} VulnScanners. All rights reserved.
           </div>
         </div>
       </div>

@@ -1,15 +1,14 @@
 import Image from "next/image";
 
 export const metadata = {
-  title: "Trust + Safety Center — Hacker Analytics",
-  description: "Trust & Safety information for Hacker Analytics — coming soon.",
-  metadataBase: new URL("https://hackeranalytics.com/trust-safety"),
+  title: "Trust + Safety Center — VulnScanners",
+  description: "Trust & Safety information for VulnScanners — coming soon.",
+  metadataBase: new URL("https://vulnscanners.com/trust-safety"),
   openGraph: {
-    title: "Trust + Safety Center — Hacker Analytics",
-    description:
-      "Trust & Safety information for Hacker Analytics — coming soon.",
-    url: "https://hackeranalytics.com/trust-safety",
-    siteName: "Hacker Analytics",
+    title: "Trust + Safety Center — VulnScanners",
+    description: "Trust & Safety information for VulnScanners — coming soon.",
+    url: "https://vulnscanners.com/trust-safety",
+    siteName: "VulnScanners",
   },
 };
 

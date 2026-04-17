@@ -12,19 +12,19 @@ export default function Navbar() {
     <header className="w-full border-b border-[var(--border)] bg-[#0a0a23] text-[var(--text)] relative z-40">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-6 px-5 py-4">
         <a
-          href="https://hackeranalytics.com"
+          href="https://vulnscanners.com"
           className="flex items-center gap-3 hover:opacity-90 transition"
         >
           <Image
             src="/HA-logo.png"
-            alt="HA logo"
+            alt="VulnScanners logo"
             width={42}
             height={42}
             className="h-10 w-auto"
             priority
           />
           <span className="text-lg font-semibold tracking-tight">
-            Hacker Analytics
+            VulnScanners
           </span>
         </a>
 

@@ -157,7 +157,7 @@ export default function AuthForm() {
               Start Scanning in 5 Minutes.
             </h1>
             <p className="text-base lg:text-lg neon-subtle max-w-xl">
-              Join the security teams that already trust Hacker Analytics to run
+              Join the security teams that already trust VulnScanners to run
               fast, zero-maintenance scans.
             </p>
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start text-sm text-[var(--text-muted)]">

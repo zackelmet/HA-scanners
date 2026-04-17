@@ -98,12 +98,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <Link href="/" className="flex items-center gap-3">
             <Image
               src="/HA-logo.png"
-              alt="Hacker Analytics"
+              alt="VulnScanners"
               width={32}
               height={32}
               className="w-8 h-8"
             />
-            <span className="font-bold text-lg">Hacker Analytics</span>
+            <span className="font-bold text-lg">VulnScanners</span>
           </Link>
         </div>
 
@@ -222,12 +222,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <Link href="/" className="flex items-center gap-2">
             <Image
               src="/HA-logo.png"
-              alt="Hacker Analytics"
+              alt="VulnScanners"
               width={24}
               height={24}
               className="w-6 h-6"
             />
-            <span className="font-bold text-[#0A1128]">Hacker Analytics</span>
+            <span className="font-bold text-[#0A1128]">VulnScanners</span>
           </Link>
           <div className="w-10" /> {/* Spacer for centering */}
         </header>

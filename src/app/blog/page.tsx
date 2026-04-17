@@ -5,21 +5,19 @@ import path from "path";
 import matter from "gray-matter";
 
 export const metadata = {
-  title: "Trust + Safety Center — Hacker Analytics",
-  description: "Trust & Safety information for Hacker Analytics — coming soon.",
-  metadataBase: new URL("https://hackeranalytics.com/blog"),
+  title: "Trust + Safety Center — VulnScanners",
+  description: "Trust & Safety information for VulnScanners — coming soon.",
+  metadataBase: new URL("https://vulnscanners.com/blog"),
   openGraph: {
-    title: "Trust + Safety Center — Hacker Analytics",
-    description:
-      "Trust & Safety information for Hacker Analytics — coming soon.",
-    url: "https://hackeranalytics.com/blog",
-    siteName: "Hacker Analytics",
+    title: "Trust + Safety Center — VulnScanners",
+    description: "Trust & Safety information for VulnScanners — coming soon.",
+    url: "https://vulnscanners.com/blog",
+    siteName: "VulnScanners",
   },
   twitter: {
     card: "summary",
-    title: "Trust + Safety Center — Hacker Analytics",
-    description:
-      "Trust & Safety information for Hacker Analytics — coming soon.",
+    title: "Trust + Safety Center — VulnScanners",
+    description: "Trust & Safety information for VulnScanners — coming soon.",
   },
 };
 

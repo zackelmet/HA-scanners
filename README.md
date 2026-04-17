@@ -1,11 +1,11 @@
-# Hacker Analytics — Hosted Security Scanners
+# VulnScanners — Hosted Security Scanners
 
 SaaS platform for cloud-hosted vulnerability scanners (e.g., Nmap, Nuclei) with a Next.js frontend and serverless backend.
 
 ## Quick Start (local)
 
 1) Install deps: `npm install`
-2) Copy `.env.example` to `.env.local` and fill Firebase/Stripe creds.
+2) Copy `.env.example` to `.env.local` and fill Firebase/Stripe creds. For production, set variables in Vercel for `vulnscanners.com`.
 3) Run dev server: `npm run dev` → http://localhost:3000
 
 ## Deploying

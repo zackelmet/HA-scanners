@@ -14,8 +14,8 @@ export default function TrustSection() {
         <div className="prose lg:prose-xl mx-auto mb-12">
           <p className="text-lg leading-relaxed">
             Hundreds of Systems Administrators, Network Engineers, Security
-            Analysts, and IT Service Providers rely on HackerAnalytics.com daily
-            to proactively monitor and detect critical vulnerabilities using our
+            Analysts, and IT Service Providers rely on vulnscanners.com daily to
+            proactively monitor and detect critical vulnerabilities using our
             powerful suite of hosted scanners.
           </p>
           <p className="text-lg leading-relaxed mt-6">
