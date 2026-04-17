@@ -92,7 +92,7 @@ export default function PricingCard({
           <div className="text-4xl font-black text-[var(--primary)]">
             {price}
           </div>
-          <div className="text-sm text-[var(--text-muted)]">one-time</div>
+          <div className="text-sm text-[var(--text-muted)]">credit pack</div>
         </div>
       </div>
 
@@ -124,7 +124,7 @@ export default function PricingCard({
           disabled={loading}
           className={`w-full py-3 font-semibold ${loading ? "opacity-70 cursor-not-allowed" : ""} ${popular ? "neon-primary-btn" : "neon-outline-btn"}`}
         >
-          {loading ? "Loading..." : "Get Started"}
+          {loading ? "Loading..." : "Get Credits"}
         </button>
       </div>
     </div>

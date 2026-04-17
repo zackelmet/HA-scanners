@@ -6,7 +6,7 @@ const admin = initializeAdmin();
 
 export async function POST(req: NextRequest) {
   try {
-    const { priceId, userId, email } = await req.json();
+    const { priceId, userId, email, quantity = 1, scanType } = await req.json();
 
     console.log("📥 Checkout request received:", { priceId, userId, email });
 
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
       line_items: [
         {
           price: priceId,
-          quantity: 1,
+          quantity: quantity || 1,
         },
       ],
       mode: "payment",
@@ -105,6 +105,8 @@ export async function POST(req: NextRequest) {
       cancel_url: `${origin}/?canceled=true`,
       metadata: {
         firebase_uid: userId, // 🔑 CRITICAL: Link payment to Firebase user
+        ...(scanType ? { scan_type: scanType } : {}),
+        quantity: String(quantity || 1),
       },
     });
 

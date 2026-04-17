@@ -6,6 +6,7 @@
     "dev": "next dev",
     "test": "jest",
     "build": "next build",
+    "stripe:update-prices": "node ./scripts/update-stripe-products.mjs",
     "start": "next start",
     "lint": "next lint",
     "pre-commit": "lint-staged && npm run build && npm test",
